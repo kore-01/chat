@@ -49,8 +49,13 @@ if command -v loginctl >/dev/null 2>&1; then
     sudo loginctl enable-linger $(whoami) || echo "Warning: Could not enable lingering. Manual action may be required: sudo loginctl enable-linger $(whoami)"
 fi
 
+# Get local IP address
+LOCAL_IP=$(hostname -I | awk '{print $1}')
+[ -z "$LOCAL_IP" ] && LOCAL_IP="localhost"
+
 echo "------------------------------------------------"
 echo "Deployment complete!"
-echo "ClawUI URL: http://localhost:$CLAWUI_PORT"
+echo "Local Access:   http://localhost:$CLAWUI_PORT"
+echo "Network Access: http://$LOCAL_IP:$CLAWUI_PORT"
 echo "------------------------------------------------"
 echo "Check status with: systemctl --user status clawui"
