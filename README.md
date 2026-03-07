@@ -60,6 +60,11 @@ To completely remove the project, including all settings and data:
 cd ~/OpenClaw-Chat-Gateway && chmod +x uninstall.sh && ./uninstall.sh
 ```
 
+### 💬 Community & Support
+
+- **Official Telegram Group**: [AngeWorld (安格视界)](https://t.me/angeworld2024)
+- **Ange Market**: [Explore Premium Assets](https://blog.angeworld.cc/market/)
+
 ---
 
 ## 简体中文
