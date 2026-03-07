@@ -57,8 +57,9 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 To completely remove the project, including all settings and data:
 
 ```bash
-cd ~/OpenClaw-Chat-Gateway && chmod +x uninstall.sh && ./uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/uninstall.sh | bash
 ```
+
 
 ### 💬 Community & Support
 
@@ -118,8 +119,9 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 如果您需要彻底删除本项目及其所有设置与数据，请运行：
 
 ```bash
-cd ~/OpenClaw-Chat-Gateway && chmod +x uninstall.sh && ./uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/uninstall.sh | bash
 ```
+
 
 ### 💬 社群与支持
 

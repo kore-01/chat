@@ -2,7 +2,7 @@
 set -e
 
 # Configuration
-PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+INSTALL_DIR="$HOME/OpenClaw-Chat-Gateway"
 SERVICE_NAME="clawui.service"
 SERVICE_PATH="$HOME/.config/systemd/user/$SERVICE_NAME"
 
@@ -16,8 +16,20 @@ echo -e "${RED}================================================${NC}"
 echo -e "${RED}   OpenClaw Chat Gateway - Uninstaller          ${NC}"
 echo -e "${RED}================================================${NC}"
 
+# Detect if we are running from the installation folder or via curl
+if [ -f "./uninstall.sh" ]; then
+    PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+else
+    PROJECT_ROOT="$INSTALL_DIR"
+fi
+
 # Confirm Uninstallation
-read -p "Are you sure you want to uninstall and delete ALL data? (y/N) " confirm
+echo -e "${RED}WARNING: This will stop the service and delete ALL data in:${NC}"
+echo -e " - $PROJECT_ROOT"
+echo -e " - ~/.clawui_dev"
+echo -e " - ~/.clawui_release"
+echo ""
+read -p "Are you sure you want to proceed? (y/N) " confirm
 if [[ ! $confirm =~ ^[Yy]$ ]]; then
     echo "Uninstallation cancelled."
     exit 0
@@ -43,9 +55,12 @@ echo "Deleted data directories: ~/.clawui_dev, ~/.clawui_release"
 
 # Remove Project Files
 echo -e "\n${BLUE}Step 3: Removing project files...${NC}"
-cd "$HOME"
-rm -rf "$PROJECT_ROOT"
-echo "Deleted project folder: $PROJECT_ROOT"
+if [ -d "$PROJECT_ROOT" ]; then
+    rm -rf "$PROJECT_ROOT"
+    echo "Deleted project folder: $PROJECT_ROOT"
+else
+    echo "Project folder $PROJECT_ROOT not found, skipping."
+fi
 
 echo -e "\n${GREEN}================================================${NC}"
 echo -e "${GREEN}   Uninstallation Complete!                     ${NC}"
