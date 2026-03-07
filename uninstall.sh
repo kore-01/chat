@@ -16,7 +16,7 @@ echo -e "${RED}================================================${NC}"
 echo -e "${RED}   OpenClaw Chat Gateway - Uninstaller          ${NC}"
 echo -e "${RED}================================================${NC}"
 
-# Detect if we are running from the installation folder or via curl
+# Detect if we are running from the installation folder or via curl/pipe
 if [ -f "./uninstall.sh" ]; then
     PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 else
@@ -26,10 +26,12 @@ fi
 # Confirm Uninstallation
 echo -e "${RED}WARNING: This will stop the service and delete ALL data in:${NC}"
 echo -e " - $PROJECT_ROOT"
-echo -e " - ~/.clawui_dev"
-echo -e " - ~/.clawui_release"
+[ -d "$HOME/.clawui_release" ] && echo -e " - ~/.clawui_release"
 echo ""
-read -p "Are you sure you want to proceed? (y/N) " confirm
+
+# Use /dev/tty to ensure input works when piped (curl | bash)
+read -p "Are you sure you want to proceed? (y/N) " confirm < /dev/tty
+
 if [[ ! $confirm =~ ^[Yy]$ ]]; then
     echo "Uninstallation cancelled."
     exit 0
@@ -49,9 +51,10 @@ systemctl --user daemon-reload
 
 # Remove Data and Logs
 echo -e "\n${BLUE}Step 2: Clearing all data and settings...${NC}"
-rm -rf "$HOME/.clawui_dev"
 rm -rf "$HOME/.clawui_release"
-echo "Deleted data directories: ~/.clawui_dev, ~/.clawui_release"
+# Only remove dev data if it truly exists
+[ -d "$HOME/.clawui_dev" ] && rm -rf "$HOME/.clawui_dev"
+echo "Deleted data directory: ~/.clawui_release"
 
 # Remove Project Files
 echo -e "\n${BLUE}Step 3: Removing project files...${NC}"
