@@ -21,7 +21,6 @@
   - Create and manage multiple character sessions.
   - **Drag-and-drop reordering** of sessions in the sidebar.
 - **🛡️ Secure Isolation**:
-  - Isolated data storage for deployment environments.
   - Independent database and upload directories.
 - **⚙️ Robust Settings**:
   - Mandatory Gateway URL validation with connectivity testing.
@@ -37,25 +36,18 @@
 - **Frontend**: Vite, React, Vanilla CSS (Premium UI), Lucide React, Framer Motion.
 - **Backend**: Node.js, Express, Better-SQLite3, Multer.
 
-### 📥 Installation & Deployment
+### 📥 One-Click Installation
 
-#### Prerequisites
-- Node.js (v18+)
-- npm
-
-#### One-Click Setup (Support Custom Ports)
-By default, the backend uses port **3110** and the frontend uses port **3115**.
+The easiest way to install OpenClaw Chat Gateway is using the one-click installer:
 
 ```bash
-# 1. Clone & npm install
-npm install
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
+```
 
-# 2. Deploy with default ports (3110/3115)
-chmod +x deploy-release.sh
-./deploy-release.sh
+*By default, the backend uses port **3110** and the frontend uses port **3115**. You can pass custom ports to the script:*
 
-# OR: Deploy with custom ports (e.g., Backend: 8080, Frontend: 8081)
-./deploy-release.sh 8080 8081
+```bash
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080 8081
 ```
 
 ---
@@ -75,7 +67,6 @@ chmod +x deploy-release.sh
   - 创建并管理多个角色会话。
   - 侧边栏支持**拖拽排序**。
 - **🛡️ 安全隔离**：
-  - 生产环境独立的存储空间。
   - 独立的数据库与上传文件夹，确保数据纯净。
 - **⚙️ 强大设置**：
   - 强制网关连接测试，确保配置正确后方可保存。
@@ -91,23 +82,16 @@ chmod +x deploy-release.sh
 - **前端**：Vite, React, Vanilla CSS (Premium UI), Lucide React, Framer Motion.
 - **后端**：Node.js, Express, Better-SQLite3, Multer.
 
-### 📥 安装与部署
+### 📥 一键安装
 
-#### 前提条件
-- Node.js (v18+)
-- npm
-
-#### 一键部署（支持自定义端口）
-默认后端端口为 **3110**，前端端口为 **3115**。
+最简单的安装方式是使用一键安装脚本：
 
 ```bash
-# 1. 获取代码并安装依赖
-npm install
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
+```
 
-# 2. 以默认端口部署 (3110/3115)
-chmod +x deploy-release.sh
-./deploy-release.sh
+*默认后端端口为 **3110**，前端端口为 **3115**。您可以通过参数自定义端口：*
 
-# 或者：使用自定义端口部署 (例如：后端 8080, 前端 8081)
-./deploy-release.sh 8080 8081
+```bash
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080 8081
 ```

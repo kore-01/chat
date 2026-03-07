@@ -2,7 +2,8 @@
 set -e
 
 # Configuration
-PROJECT_ROOT="/home/ange/Dev/Antigravity/clawui"
+# Dynamically determine project root from the script's directory
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SERVICE_DIR="$HOME/.config/systemd/user"
 
 # Default Ports
@@ -10,19 +11,25 @@ BACKEND_PORT=${1:-3110}
 FRONTEND_PORT=${2:-3115}
 
 echo "Deploying OpenClaw Chat Gateway..."
+echo "Project Path:  $PROJECT_ROOT"
 echo "Backend Port:  $BACKEND_PORT"
 echo "Frontend Port: $FRONTEND_PORT"
 
 echo "Building projects..."
 cd "$PROJECT_ROOT"
+npm install
 npm run build
 
 echo "Setting up systemd services..."
 mkdir -p "$SERVICE_DIR"
 
-# Copy and update service files with custom ports
+# Copy and update service files
 cp "$PROJECT_ROOT/clawui-backend.service" "$SERVICE_DIR/"
 cp "$PROJECT_ROOT/clawui-frontend.service" "$SERVICE_DIR/"
+
+# Update WorkingDirectory in service files
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$PROJECT_ROOT/backend|" "$SERVICE_DIR/clawui-backend.service"
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$PROJECT_ROOT/frontend|" "$SERVICE_DIR/clawui-frontend.service"
 
 # Update backend service port
 sed -i "s/Environment=PORT=.*/Environment=PORT=$BACKEND_PORT/" "$SERVICE_DIR/clawui-backend.service"
@@ -43,7 +50,9 @@ systemctl --user restart clawui-frontend.service
 
 # Ensure services stay running after logout
 echo "Enabling lingering for user $(whoami)..."
-sudo loginctl enable-linger $(whoami)
+if command -v loginctl >/dev/null 2>&1; then
+    sudo loginctl enable-linger $(whoami) || echo "Warning: Could not enable lingering. Manual action may be required: sudo loginctl enable-linger $(whoami)"
+fi
 
 echo "------------------------------------------------"
 echo "Deployment complete!"
