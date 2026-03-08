@@ -55,6 +55,17 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080
 ```
 
+### 🆙 Update / Upgrade
+
+To update to the latest version while preserving your existing port, configuration, and data:
+
+```bash
+cd ~/OpenClaw-Chat-Gateway # Go to your project directory
+./update.sh
+```
+
+*The update script will automatically detect your currently running port and perform a non-destructive upgrade.*
+
 ### 🗑️ Uninstallation
 
 To completely remove the project, including all settings and data:
@@ -119,6 +130,17 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 ```bash
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080
 ```
+
+### 🆙 升级与更新
+
+如果您需要更新到最新版本，且希望**保留当前的端口、配置及数据库数据**，请运行：
+
+```bash
+cd ~/OpenClaw-Chat-Gateway # 进入项目目录
+./update.sh
+```
+
+*该脚本会自动检测您当前正在运行的端口，并执行无损升级。*
 
 ### 🗑️ 卸载
 
