@@ -35,20 +35,24 @@
 > 本项目须安装在安装了 OpenClaw 的 **Linux 主机**上，且必须是 **原生安装**（非 Docker）。
 
 #### 📥 一键安装
-```bash
-# 默认端口 3115
-curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
 
-# 自定义端口部署 (例如 8080)
+**默认端口 3115**
+```bash
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
+```
+
+**自定义端口部署 (例如 8080)**
+```bash
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080
 ```
 
-#### 🆙 无损升级 / 🗑️ 彻底卸载
+#### 🆙 无损升级
 ```bash
-# 无损升级
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/update.sh | bash
+```
 
-# 彻底卸载
+#### 🗑️ 彻底卸载
+```bash
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/uninstall.sh | bash
 ```
 
@@ -101,20 +105,24 @@ sudo apt update && sudo apt install libreoffice -y
 > This project must be installed on a **Linux host** where OpenClaw is already installed, and it must be a **native installation** (not Docker).
 
 #### 📥 One-Click Installation
-```bash
-# Default port 3115
-curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
 
-# Custom port deployment (e.g., 8080)
+**Default port 3115**
+```bash
+curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash
+```
+
+**Custom port deployment (e.g., 8080)**
+```bash
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/install.sh | bash -s 8080
 ```
 
-#### 🆙 Non-Destructive Upgrade / 🗑️ Complete Uninstallation
+#### 🆙 Non-Destructive Upgrade
 ```bash
-# Non-destructive upgrade
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/update.sh | bash
+```
 
-# Complete uninstallation
+#### 🗑️ Complete Uninstallation
+```bash
 curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/main/uninstall.sh | bash
 ```
 
