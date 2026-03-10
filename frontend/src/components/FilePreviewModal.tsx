@@ -61,8 +61,8 @@ function extractPathParam(url: string): string | null {
 }
 
 // Zoomable Wrapper for mobile pinch-to-zoom
-// Uses direct DOM manipulation (no React state for transforms) to avoid re-render storms
-// that crash iOS Safari, and touch-action:none to fully block Android native scroll during pinch.
+// FULL TOUCH TAKEOVER: touch-action:none always, all gestures handled manually.
+// This is the only way to reliably prevent Android Chrome from hijacking scroll during pinch.
 function ZoomableWrapper({ children, center = false }: { children: React.ReactNode, center?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,6 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
     let lastTouchX = 0;
     let lastTouchY = 0;
     let lastTapTime = 0;
-    let hasMoved = false; // Track if user actually moved during single touch
 
     const applyTransform = () => {
       if (scale > 1) {
@@ -98,28 +97,24 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
     };
 
     const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault(); // ALWAYS prevent - we handle everything manually
       if (e.touches.length === 2) {
-        e.preventDefault();
         isPinching = true;
-        hasMoved = false;
         startDist = Math.hypot(
           e.touches[0].pageX - e.touches[1].pageX,
           e.touches[0].pageY - e.touches[1].pageY
         );
         startScale = scale;
 
-        // Compute pinch midpoint
         const rect = container.getBoundingClientRect();
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         originX = Math.max(0, Math.min(100, ((midX - rect.left) / rect.width) * 100));
         originY = Math.max(0, Math.min(100, ((midY - rect.top + container.scrollTop) / container.scrollHeight) * 100));
       } else if (e.touches.length === 1) {
-        hasMoved = false;
         const now = Date.now();
-        if (now - lastTapTime < 300 && !hasMoved) {
+        if (now - lastTapTime < 300) {
           // Double-tap toggle zoom
-          e.preventDefault();
           if (scale === 1) {
             scale = 2;
             translateX = 0;
@@ -136,7 +131,7 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
           }
           applyTransform();
           setIsZoomed(scale > 1);
-          lastTapTime = 0; // Reset to prevent triple-tap
+          lastTapTime = 0;
         } else {
           lastTapTime = now;
         }
@@ -146,8 +141,8 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault(); // ALWAYS prevent - we handle scroll manually
       if (e.touches.length === 2 && isPinching) {
-        e.preventDefault();
         const dist = Math.hypot(
           e.touches[0].pageX - e.touches[1].pageX,
           e.touches[0].pageY - e.touches[1].pageY
@@ -161,28 +156,28 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
           originY = 50;
         }
         applyTransform();
-        setIsZoomed(scale > 1);
-      } else if (e.touches.length === 1 && scale > 1) {
-        // Pan when zoomed
-        e.preventDefault();
-        hasMoved = true;
+      } else if (e.touches.length === 1) {
         const dx = e.touches[0].pageX - lastTouchX;
         const dy = e.touches[0].pageY - lastTouchY;
-        translateX += dx / scale;
-        translateY += dy / scale;
         lastTouchX = e.touches[0].pageX;
         lastTouchY = e.touches[0].pageY;
-        applyTransform();
-      } else if (e.touches.length === 1 && scale === 1) {
-        hasMoved = true;
-        // At scale=1, let native scroll happen (don't preventDefault)
+
+        if (scale > 1) {
+          // Zoomed: pan the transform
+          translateX += dx / scale;
+          translateY += dy / scale;
+          applyTransform();
+        } else {
+          // Not zoomed: manual scroll (replaces native scroll)
+          container.scrollTop -= dy;
+        }
       }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
       if (isPinching && e.touches.length < 2) {
         isPinching = false;
-        // If going back from 2 fingers to 1, update lastTouch
+        setIsZoomed(scale > 1); // Only update React state on end
         if (e.touches.length === 1) {
           lastTouchX = e.touches[0].pageX;
           lastTouchY = e.touches[0].pageY;
@@ -208,8 +203,7 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
       ref={containerRef}
       className={`w-full h-full flex flex-col items-center ${center ? 'justify-center' : 'justify-start'} ${isZoomed ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
       style={{ 
-        touchAction: isZoomed ? 'none' : 'pan-y',
-        WebkitOverflowScrolling: 'touch',
+        touchAction: 'none', // We handle ALL touch gestures manually
       }}
     >
       <div 
