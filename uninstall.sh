@@ -38,6 +38,8 @@ CLEAN_DIRS=$(echo "$DETECTED_DIRS $INSTALL_DIR" | tr ' ' '\n' | sort -u | grep -
 
 # 动态探测工作区
 TARGET_WORKSPACES=""
+
+# 来源 1: 从 SQLite 数据库探测 (如果存在且有工具)
 if [ -f "$DB_PATH" ] && command -v sqlite3 &>/dev/null; then
     AGENT_IDS=$(sqlite3 "$DB_PATH" "SELECT DISTINCT agentId FROM characters;" 2>/dev/null || true)
     for id in $AGENT_IDS; do
@@ -47,12 +49,40 @@ if [ -f "$DB_PATH" ] && command -v sqlite3 &>/dev/null; then
             TARGET_WORKSPACES="$TARGET_WORKSPACES $WORKSPACE_BASE/workspace-$id"
         fi
     done
-else
-    # 基础回退方案
-    TARGET_WORKSPACES="$WORKSPACE_BASE/workspace-main"
 fi
-# 去重
-TARGET_WORKSPACES=$(echo "$TARGET_WORKSPACES" | tr ' ' '\n' | sort -u | grep -v "^$" || true)
+
+# 来源 2: 从 openclaw.json 配置文件探测
+OPENCLAW_CONFIG="$WORKSPACE_BASE/openclaw.json"
+if [ -f "$OPENCLAW_CONFIG" ]; then
+    if command -v jq &>/dev/null; then
+        # 使用 jq 提取所有 workspace 路径
+        JSON_WS=$(jq -r '.agents.list[].workspace' "$OPENCLAW_CONFIG" 2>/dev/null || true)
+        TARGET_WORKSPACES="$TARGET_WORKSPACES $JSON_WS"
+    else
+        # 兜底：使用 grep/sed 提取 workspace 路径内容
+        JSON_WS=$(grep '"workspace":' "$OPENCLAW_CONFIG" | sed 's/.*"workspace": "\(.*\)".*/\1/' || true)
+        TARGET_WORKSPACES="$TARGET_WORKSPACES $JSON_WS"
+    fi
+fi
+
+# 来源 3: 启发式扫描 (查找包含 SOUL.md 的 workspace-* 目录)
+if [ -d "$WORKSPACE_BASE" ]; then
+    # 扫描目录下所有的 workspace- 开头的目录
+    H_WS=$(find "$WORKSPACE_BASE" -maxdepth 2 -type f -name "SOUL.md" | xargs -I {} dirname {} | grep "/workspace-" || true)
+    TARGET_WORKSPACES="$TARGET_WORKSPACES $H_WS"
+fi
+
+# 默认包含主工作区 (如果存在)
+[ -d "$WORKSPACE_BASE/workspace-main" ] && TARGET_WORKSPACES="$TARGET_WORKSPACES $WORKSPACE_BASE/workspace-main"
+
+# 去重并验证目录是否存在
+CLEAN_WS=""
+for ws in $TARGET_WORKSPACES; do
+    if [ -d "$ws" ]; then
+        CLEAN_WS="$CLEAN_WS $ws"
+    fi
+done
+TARGET_WORKSPACES=$(echo "$CLEAN_WS" | tr ' ' '\n' | sort -u | grep -v "^$" || true)
 
 # 确认卸载
 echo -e "${RED}警告: 这将停止所有相关服务并删除以下内容:${NC}"
@@ -60,7 +90,7 @@ for d in $CLEAN_DIRS; do
     echo -e " - $d (项目文件)"
 done
 for ws in $TARGET_WORKSPACES; do
-    [ -d "$ws" ] && echo -e " - $ws (工作区)"
+    echo -e " - $ws (工作区)"
 done
 echo -e " - $HOME/.clawui (本项目专用数据库及运行时数据)"
 [ -d "$HOME/.clawui_release" ] && echo -e " - ~/.clawui_release (旧版数据)"
