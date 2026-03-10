@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/file_preview.png" width="45%" />
+  <img src="docs/screenshots/file_preview.png" width="100%" />
 </p>
 
 # OpenClaw Chat Gateway
