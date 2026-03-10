@@ -56,8 +56,8 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 精心打磨的移动端细节，不仅是响应式，更是沉浸式。
 
 <p align="center">
-  <img src="docs/screenshots/mobile_sidebar.png" width="45%" />
-  <img src="docs/screenshots/mobile_chat.png" width="45%" />
+  <img src="docs/screenshots/mobile_sidebar.jpg" width="45%" />
+  <img src="docs/screenshots/mobile_chat.jpg" width="45%" />
 </p>
 
 ---
