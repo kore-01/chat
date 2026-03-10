@@ -293,14 +293,20 @@ export default function ChatView({ isConnected, activeSessionId, onMenuClick, se
       const r = await fetch(`/api/history/${activeSessionId}`);
       const d = await r.json();
       if (d?.success && Array.isArray(d.messages)) {
+        // Capture the session/model at load time as a FROZEN fallback for old messages
+        // without stored snapshots. This prevents renames from retroactively polluting old messages.
+        const loadTimeSession = sessions.find(s => s.id === activeSessionId);
+        const loadTimeAgentName = loadTimeSession?.name || aiName || '';
+        const loadTimeModel = loadTimeSession?.model || currentModel || '';
+
         const rows = d.messages.map((m: any) => ({
           id: String(m.id || Math.random()),
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: String(m.content || ''),
           timestamp: new Date(m.created_at || Date.now()),
-          model: m.model_used || undefined,
+          model: m.model_used || loadTimeModel || undefined,
           agentId: m.agent_id || undefined,
-          agentName: m.agent_name || undefined,
+          agentName: m.agent_name || loadTimeAgentName || undefined,
         }));
         setMessages(rows);
       }
