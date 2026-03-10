@@ -911,52 +911,52 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">提供商端点 (Endpoint)</label>
-                    <input
-                      list="known-endpoints"
-                      type="text"
-                      value={newModelEndpoint}
-                      onChange={(e) => setNewModelEndpoint(e.target.value)}
-                      placeholder="例如: openai"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
-                    />
-                    <datalist id="known-endpoints">
-                      {knownEndpoints.map(ep => (
-                        <option key={ep} value={ep} />
-                      ))}
-                    </datalist>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500">模型标识 (Model ID)</label>
-                    <input
-                      type="text"
-                      value={newModelName}
-                      onChange={(e) => setNewModelName(e.target.value)}
-                      placeholder="例如: gpt-5.4"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1 relative">
-                    <label className="text-xs font-medium text-gray-500">显示别名 (可选)</label>
-                    <div className="flex gap-2">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 mb-6">
+                  <div className="flex flex-col sm:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">提供商端点 (Endpoint)</label>
+                      <input
+                        list="known-endpoints"
+                        type="text"
+                        value={newModelEndpoint}
+                        onChange={(e) => setNewModelEndpoint(e.target.value)}
+                        placeholder="例如: openai"
+                        className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                      />
+                      <datalist id="known-endpoints">
+                        {knownEndpoints.map(ep => (
+                          <option key={ep} value={ep} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">模型标识 (Model ID)</label>
+                      <input
+                        type="text"
+                        value={newModelName}
+                        onChange={(e) => setNewModelName(e.target.value)}
+                        placeholder="例如: gpt-5.4"
+                        className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                      />
+                    </div>
+                    <div className="flex-1 w-full">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">显示别名 (可选)</label>
                       <input
                         type="text"
                         value={newModelAlias}
                         onChange={(e) => setNewModelAlias(e.target.value)}
                         placeholder="例如: GPT 5.4"
-                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+                        className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
                       />
+                    </div>
+                    <div className="flex w-full sm:w-auto gap-2">
                       <button
                         onClick={handleAddModel}
                         disabled={isLoading || !newModelEndpoint.trim() || !newModelName.trim()}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center"
-                        title="添加模型"
+                        className="h-[42px] px-6 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all disabled:opacity-50 flex-1 sm:flex-none flex items-center justify-center gap-2"
                       >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        新增
                       </button>
                     </div>
                   </div>
