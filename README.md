@@ -79,6 +79,7 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 
 - **Official Telegram Group**: [AngeWorld (安格视界)](https://t.me/angeworld2024)
 - **Ange Market**: [Explore Premium Assets](https://blog.angeworld.cc/market/)
+- **AI Interface**: [芝麻开门AI接口 (ai.opendoor.cn)](https://ai.opendoor.cn)
 
 ---
 
@@ -155,6 +156,7 @@ curl -fsSL https://raw.githubusercontent.com/liandu2024/OpenClaw-Chat-Gateway/ma
 
 - **官方 TG 交流群**：[安格视界 (AngeWorld)](https://t.me/angeworld2024)
 - **安格超市**：[获取更多精品资源](https://blog.angeworld.cc/market/)
+- **AI 接口**：[芝麻开门 AI 接口](https://ai.opendoor.cn)
 
 ---
 
