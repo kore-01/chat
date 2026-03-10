@@ -574,7 +574,7 @@ export default function Sidebar({
                         .sort((a, b) => {
                           if (a.primary && !b.primary) return -1;
                           if (!a.primary && b.primary) return 1;
-                          return a.id.localeCompare(b.id);
+                          return a.id.localeCompare(b.id, undefined, { sensitivity: 'base' });
                         })
                         .map(m => (
                           <button

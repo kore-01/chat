@@ -497,7 +497,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   };
 
   // Get distinct endpoints from current models
-  const knownEndpoints = Array.from(new Set(models.map(m => m.id.split('/')[0]).filter(Boolean)));
+  const knownEndpoints = Array.from(new Set(models.map(m => m.id.split('/')[0]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
   const headerTitle = settingsTab === 'gateway' ? '设置 - 网关' : settingsTab === 'general' ? '设置 - 通用' : settingsTab === 'commands' ? '设置 - 快捷指令' : settingsTab === 'models' ? '设置 - 模型管理' : '关于系统';
 
@@ -1044,7 +1044,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                           </td>
                         </tr>
                       ) : (
-                        [...models].sort((a, b) => a.id.localeCompare(b.id)).map((model) => (
+                        [...models].sort((a, b) => a.id.localeCompare(b.id, undefined, { sensitivity: 'base' })).map((model) => (
                           <tr key={model.id} className={`hover:bg-gray-50/50 transition-colors text-base ${editingModelId === model.id ? 'bg-blue-50/30' : 'group'}`}>
                             <td className="px-4 py-4 text-gray-700">{model.id}</td>
                             <td className="px-4 py-3 text-gray-600">
