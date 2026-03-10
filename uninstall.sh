@@ -38,17 +38,18 @@ fi
 CLEAN_DIRS=$(echo "$DETECTED_DIRS $INSTALL_DIR" | tr ' ' '\n' | sort -u | grep -v "^$" || true)
 
 # 确认卸载
-echo -e "${RED}警告: 这将停止所有相关服务并删除以下目录中的所有内容:${NC}"
+echo -e "${RED}警告: 这将停止所有相关服务并删除以下内容:${NC}"
 for d in $CLEAN_DIRS; do
     echo -e " - $d (项目文件)"
 done
-echo -e " - $HOME/.openclaw (工作区及配置)"
-echo -e " - $HOME/.clawui (数据库及运行时数据)"
+echo -e " - $HOME/.openclaw/workspace-main (工作区)"
+echo -e " - $HOME/.openclaw/workspace-agent_* (所有由本项目创建的代理工作区)"
+echo -e " - $HOME/.clawui (本项目专用数据库及运行时数据)"
 [ -d "$HOME/.clawui_release" ] && echo -e " - ~/.clawui_release (旧版数据)"
 echo ""
 
 # 使用 /dev/tty 确保在管道模式下也能输入
-read -p "您确定要彻底卸载并删除所有数据吗? (y/N) " confirm < /dev/tty
+read -p "您确定要卸载并删除本项目相关的数据吗? (y/N) " confirm < /dev/tty
 
 if [[ ! $confirm =~ ^[Yy]$ ]]; then
     echo "卸载已取消。"
@@ -67,12 +68,16 @@ done
 systemctl --user daemon-reload
 
 # 移除数据和日志
-echo -e "\n${BLUE}步骤 2: 正在清理所有数据和设置...${NC}"
-rm -rf "$HOME/.openclaw"
+echo -e "\n${BLUE}步骤 2: 正在清理本项目相关的数据和设置...${NC}"
+# 仅删除本项目创建的特定目录，保留 .openclaw 其他内容
+rm -rf "$HOME/.openclaw/workspace-main"
+# 使用 find 匹配并删除 workspace-agent_* 目录（如果有的话）
+find "$HOME/.openclaw" -maxdepth 1 -name "workspace-agent_*" -type d -exec rm -rf {} + 2>/dev/null || true
+
 rm -rf "$HOME/.clawui"
 rm -rf "$HOME/.clawui_release"
 [ -d "$HOME/.clawui_dev" ] && rm -rf "$HOME/.clawui_dev"
-echo "已删除数据目录: ~/.openclaw, ~/.clawui"
+echo "已清理本项目相关的配置和数据库数据。"
 
 # 移除项目文件
 echo -e "\n${BLUE}步骤 3: 正在移除项目文件...${NC}"
