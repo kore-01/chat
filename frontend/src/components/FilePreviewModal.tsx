@@ -64,11 +64,13 @@ function extractPathParam(url: string): string | null {
 function ZoomableWrapper({ children, center = false }: { children: React.ReactNode, center?: boolean }) {
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [origin, setOrigin] = useState({ x: 50, y: 50 }); // percentage origin for transform
   const containerRef = useRef<HTMLDivElement>(null);
   const startDist = useRef<number>(0);
   const startScale = useRef<number>(1);
   const lastTouch = useRef<{ x: number, y: number } | null>(null);
   const lastTap = useRef<number>(0);
+  const originSet = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
@@ -78,12 +80,37 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
       );
       startDist.current = dist;
       startScale.current = scale;
+      originSet.current = false;
+
+      // Calculate pinch midpoint relative to container for transform-origin
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        // Convert to percentage of the scrollable content (including scroll offset)
+        const scrollTop = container.scrollTop;
+        const scrollLeft = container.scrollLeft;
+        const originX = ((midX - rect.left + scrollLeft) / container.scrollWidth) * 100;
+        const originY = ((midY - rect.top + scrollTop) / container.scrollHeight) * 100;
+        setOrigin({ x: Math.max(0, Math.min(100, originX)), y: Math.max(0, Math.min(100, originY)) });
+        originSet.current = true;
+      }
     } else if (e.touches.length === 1) {
       const now = Date.now();
       if (now - lastTap.current < 300) {
         const newScale = scale === 1 ? 2 : 1;
         setScale(newScale);
         setTranslate({ x: 0, y: 0 });
+        if (newScale === 1) setOrigin({ x: 50, y: 50 });
+        // Set origin to tap position for double-tap zoom
+        if (newScale > 1 && containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const scrollTop = containerRef.current.scrollTop;
+          const originX = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+          const originY = ((e.touches[0].clientY - rect.top + scrollTop) / containerRef.current.scrollHeight) * 100;
+          setOrigin({ x: originX, y: originY });
+        }
       }
       lastTap.current = now;
       lastTouch.current = { x: e.touches[0].pageX, y: e.touches[0].pageY };
@@ -100,7 +127,10 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
       );
       const newScale = Math.min(Math.max(startScale.current * (dist / startDist.current), 1), 4);
       setScale(newScale);
-      if (newScale === 1) setTranslate({ x: 0, y: 0 });
+      if (newScale === 1) {
+        setTranslate({ x: 0, y: 0 });
+        setOrigin({ x: 50, y: 50 });
+      }
     } else if (e.touches.length === 1 && scale > 1 && lastTouch.current) {
       // Single finger panning - prevent default to stop native scrolling when zoomed
       if (e.cancelable) e.preventDefault();
@@ -140,9 +170,10 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
       onTouchEnd={handleTouchEnd}
     >
       <div 
-        className={`transition-transform duration-100 ease-out origin-top flex-shrink-0 flex flex-col items-center ${isZoomed ? 'will-change-transform' : ''}`}
+        className={`transition-transform duration-100 ease-out flex-shrink-0 flex flex-col items-center ${isZoomed ? 'will-change-transform' : ''}`}
         style={{ 
           transform: isZoomed ? `scale(${scale}) translate(${Math.round(translate.x)}px, ${Math.round(translate.y)}px)` : 'none', 
+          transformOrigin: `${origin.x}% ${origin.y}%`,
           width: '100%',
           minHeight: center ? 'auto' : '100%' 
         }}
