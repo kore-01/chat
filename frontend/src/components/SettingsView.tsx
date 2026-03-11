@@ -718,7 +718,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
     ...models.map(m => m.id.split('/')[0]).filter(Boolean)
   ])).sort((a, b) => a.localeCompare(b));
 
-  const headerTitle = settingsTab === 'gateway' ? '设置 - 网关' : settingsTab === 'general' ? '设置 - 通用' : settingsTab === 'commands' ? '设置 - 快捷指令' : settingsTab === 'models' ? '设置 - 模型管理' : '关于系统';
+  const headerTitle = settingsTab === 'gateway' ? '设置 - 网关' : settingsTab === 'general' ? '设置 - 通用' : settingsTab === 'commands' ? '设置 - 快捷指令' : settingsTab === 'models' ? '设置 - 模型管理' : '设置 - 关于';
 
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
@@ -1533,7 +1533,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                     href="https://ai.opendoor.cn" 
                     target="_blank" 
                     rel="noreferrer"
-                    className="flex items-center justify-center px-6 py-2.5 rounded-xl sm:rounded-full bg-[#fefce8] border border-blue-300 text-[#3b82f6] hover:bg-yellow-100 hover:border-blue-400 transition-all font-bold text-[11px] min-[380px]:text-[12px] sm:text-[14px] max-w-full text-center shadow-sm"
+                    className="flex items-center justify-center px-6 py-2.5 rounded-xl sm:rounded-full bg-[#fefce8] border border-blue-300 text-[#3b82f6] hover:bg-yellow-100 hover:border-blue-400 transition-all font-bold text-[11px] min-[380px]:text-[12px] sm:text-[14px] max-w-full text-center"
                   >
                     芝麻开门 AI 接口 : https://ai.opendoor.cn
                   </a>
