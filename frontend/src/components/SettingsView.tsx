@@ -75,11 +75,15 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [endpointSearchQuery, setEndpointSearchQuery] = useState('');
   const [testModelStatus, setTestModelStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testModelMessage, setTestModelMessage] = useState('');
+  
+  const [addModelTestStatus, setAddModelTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [addModelTestMessage, setAddModelTestMessage] = useState('');
   const [showForceAddModal, setShowForceAddModal] = useState(false);
   const editAliasInputRef = useRef<HTMLInputElement>(null);
 
   // --- Model Discovery State ---
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [addModelError, setAddModelError] = useState('');
   const [discoveredModels, setDiscoveredModels] = useState<string[]>([]);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -207,9 +211,19 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const handleTestAllFiltered = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const filtered = discoveredModels.filter(m => m.toLowerCase().includes(modelSearchQuery.toLowerCase()));
-    for (const m of filtered) {
-       if (existingModelIds.has(`${newModelEndpoint.trim()}/${m}`)) continue;
-       handleTestSingleModel(m); // Do it in parallel rather than blocking sequentially
+    const testPromises = filtered.map(async (m) => {
+      if (existingModelIds.has(`${newModelEndpoint.trim()}/${m}`)) return;
+      await handleTestSingleModel(m);
+    });
+
+    try {
+      await Promise.all(testPromises);
+      setAddModelTestStatus('success');
+      setAddModelTestMessage('所有过滤模型测试完成');
+    } catch (error: any) {
+      setAddModelTestStatus('error');
+      setAddModelTestMessage('请求连通性接口失败');
+      setAddModelError(error.message || '网络连接失败');
     }
   };
 
@@ -487,12 +501,12 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const handleTestModel = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
     if (!newModelEndpoint.trim() || !newModelName.trim()) {
-      setModelError('端点和模型名称不能为空以进行检测');
-      setTimeout(() => setModelError(''), 3000);
+      setAddModelError('端点和模型名称不能为空以进行检测');
+      setTimeout(() => setAddModelError(''), 3000);
       return false;
     }
-    setTestModelStatus('testing');
-    setTestModelMessage('正在检测模型连通性...');
+    setAddModelTestStatus('testing');
+    setAddModelTestMessage('正在检测模型连通性...');
     try {
       const res = await fetch('/api/models/test', {
         method: 'POST',
@@ -503,14 +517,13 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         })
       });
       const data = await res.json().catch(() => ({}));
-      if (data.success) {
-        setTestModelStatus('success');
-        setTestModelMessage(data.message || '模型有效连通');
-        setTimeout(() => setTestModelStatus('idle'), 3000);
+      if (res.ok) {
+        setAddModelTestStatus('success');
+        setAddModelTestMessage(`模型连通性良好 (${data.latency}ms)`);
         return true;
       } else {
-        setTestModelStatus('error');
-        setTestModelMessage(data.error || '连通性测试失败');
+        setAddModelTestStatus('error');
+        setAddModelTestMessage(data.error || '连通性测试失败');
         return false;
       }
     } catch (err: any) {
@@ -522,8 +535,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
   const handleAddModel = async (force: boolean = false) => {
     if (!newModelEndpoint.trim() || !newModelName.trim()) {
-      setModelError('端点和模型名称不能为空');
-      setTimeout(() => setModelError(''), 3000);
+      setAddModelError('端点和模型名称不能为空');
+      setTimeout(() => setAddModelError(''), 3000);
       return;
     }
 
@@ -1145,11 +1158,13 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                           setNewModelEndpoint('');
                           setNewModelName('');
                           setNewModelAlias('');
-                          setTestModelStatus('idle');
+                          setAddModelTestStatus('idle');
                           setTestModelMessage('');
                           setDiscoveredModels([]);
                           setModelSearchQuery('');
                           setIndividualTestStatus({});
+                          setModelError('');
+                          setAddModelError('');
                           setIsAddModelModalOpen(true);
                       }}
                       className="h-[40px] px-5 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all flex items-center gap-1.5 shrink-0"
@@ -1610,22 +1625,22 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
             </div>
             
             <div className="p-6 space-y-5 flex-1 overflow-visible flex flex-col">
-              {modelError && (
+              {addModelError && (
                 <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2">
                   <X className="w-4 h-4 shrink-0" />
-                  {modelError}
+                  {addModelError}
                 </div>
               )}
-              {testModelStatus !== 'idle' && (
+              {addModelTestStatus !== 'idle' && (
                 <div className={`p-3 text-sm rounded-xl border flex items-center gap-2 animate-in fade-in duration-300 ${
-                  testModelStatus === 'testing' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                  testModelStatus === 'success' ? 'bg-green-50 text-green-600 border-green-100' :
+                  addModelTestStatus === 'testing' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                  addModelTestStatus === 'success' ? 'bg-green-50 text-green-600 border-green-100' :
                   'bg-red-50 text-red-600 border-red-100'
                 }`}>
-                  {testModelStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> :
-                    testModelStatus === 'success' ? <Check className="w-4 h-4 shrink-0" /> :
+                  {addModelTestStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> :
+                    addModelTestStatus === 'success' ? <Check className="w-4 h-4 shrink-0" /> :
                     <X className="w-4 h-4 shrink-0" />}
-                  {testModelMessage}
+                  {addModelTestMessage}
                 </div>
               )}
 
@@ -1916,15 +1931,15 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
               <button
                 type="button"
                 onClick={handleTestModel}
-                disabled={testModelStatus === 'testing' || !newModelEndpoint.trim() || !newModelName.trim()}
+                disabled={addModelTestStatus === 'testing' || !newModelEndpoint.trim() || !newModelName.trim()}
                 className="px-5 py-2.5 text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                {testModelStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin" /> : '检测'}
+                {addModelTestStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin" /> : '检测'}
               </button>
               <button
                 type="button"
                 onClick={() => handleAddModel(false)}
-                disabled={isLoading || testModelStatus === 'testing' || !newModelEndpoint.trim() || !newModelName.trim()}
+                disabled={isLoading || addModelTestStatus === 'testing' || !newModelEndpoint.trim() || !newModelName.trim()}
                 className="px-6 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
