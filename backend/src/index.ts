@@ -348,6 +348,175 @@ app.get('/api/models', (_req, res) => {
   res.json({ success: true, models });
 });
 
+app.post('/api/models/test', async (req, res) => {
+  try {
+    const { endpoint, modelName } = req.body;
+    if (!endpoint || !modelName) {
+      return res.status(400).json({ success: false, error: 'endpoint and modelName required' });
+    }
+
+    const endpoints = agentProvisioner.getEndpoints();
+    const config = endpoints.find((e: any) => e.id === endpoint);
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Endpoint not found' });
+    }
+
+    let baseUrl = config.baseUrl;
+    const apiKey = config.apiKey || '';
+    const apiType = config.api.toLowerCase();
+
+    let testUrl = '';
+    let headers: any = {
+      'Content-Type': 'application/json'
+    };
+    let body: any = {};
+
+    if (apiType.includes('anthropic')) {
+      testUrl = `${baseUrl.replace(/\/$/, '')}/messages`;
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      body = {
+        model: modelName,
+        messages: [{ role: 'user', content: 'hello' }],
+        max_tokens: 1
+      };
+    } else if (apiType.includes('gemini') || apiType.includes('google')) {
+      testUrl = `${baseUrl.replace(/\/$/, '')}/models/${modelName}:generateContent?key=${apiKey}`;
+      body = {
+        contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+        generationConfig: { maxOutputTokens: 1 }
+      };
+    } else if (apiType.includes('ollama')) {
+      testUrl = `${baseUrl.replace(/\/$/, '')}/api/chat`; 
+      body = {
+        model: modelName,
+        messages: [{ role: 'user', content: 'hello' }],
+        stream: false
+      };
+    } else {
+      // Fallback for OpenAI, Ark, DeepSeek, Minimax, etc.
+      testUrl = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+      headers['Authorization'] = `Bearer ${apiKey}`;
+      body = {
+        model: modelName,
+        messages: [{ role: 'user', content: 'hello' }],
+        max_tokens: 1
+      };
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const resp = await fetch(testUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (resp.ok) {
+        return res.json({ success: true, message: '模型有效连通' });
+      } else {
+        const errorText = await (await resp.blob()).text();
+        let errMsg = `HTTP ${resp.status} ${resp.statusText}`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.error?.message) errMsg += ` - ${parsed.error.message}`;
+          else if (parsed.error) errMsg += ` - ${JSON.stringify(parsed.error)}`;
+          else if (parsed.message) errMsg += ` - ${parsed.message}`;
+        } catch {
+          if (errorText.length > 0) errMsg += ` - ${errorText.substring(0, 100)}`;
+        }
+        return res.json({ success: false, error: errMsg });
+      }
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      return res.json({ success: false, error: e.message || '网络连接失败' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/models/discover', async (req, res) => {
+  try {
+    const endpoint = req.query.endpoint as string;
+    if (!endpoint) {
+      return res.status(400).json({ success: false, error: 'endpoint required' });
+    }
+
+    const endpoints = agentProvisioner.getEndpoints();
+    const config = endpoints.find((e: any) => e.id === endpoint);
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Endpoint not found' });
+    }
+
+    const baseUrl = config.baseUrl.replace(/\/$/, '');
+    const apiKey = config.apiKey || '';
+    const apiType = config.api.toLowerCase();
+
+    let discoverUrl = '';
+    const headers: any = {
+      'Content-Type': 'application/json'
+    };
+
+    if (apiType.includes('anthropic')) {
+      discoverUrl = `${baseUrl}/models`;
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+    } else if (apiType.includes('gemini') || apiType.includes('google')) {
+      discoverUrl = `${baseUrl}/models?key=${apiKey}`;
+    } else if (apiType.includes('ollama')) {
+      discoverUrl = `${baseUrl}/api/tags`;
+    } else {
+      // Fallback for OpenAI, Ark, DeepSeek, Minimax, etc.
+      discoverUrl = `${baseUrl}/models`;
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const resp = await fetch(discoverUrl, {
+      method: 'GET',
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      return res.status(resp.status).json({ success: false, error: `Failed to discover models: HTTP ${resp.status} - ${errorText.substring(0, 100)}` });
+    }
+
+    const data: any = await resp.json();
+    let models: string[] = [];
+
+    if (apiType.includes('ollama')) {
+      if (data.models && Array.isArray(data.models)) {
+        models = data.models.map((m: any) => m.name);
+      }
+    } else if (apiType.includes('gemini') || apiType.includes('google')) {
+      if (data.models && Array.isArray(data.models)) {
+        models = data.models.map((m: any) => m.name.replace('models/', ''));
+      }
+    } else {
+      // OpenAI / Anthropic format
+      if (data.data && Array.isArray(data.data)) {
+        models = data.data.map((m: any) => m.id);
+      } else if (Array.isArray(data)) {
+         models = data.map((m: any) => m.id || m.name);
+      }
+    }
+
+    return res.json({ success: true, models: models.filter(Boolean) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Network error during discovery' });
+  }
+});
+
 app.post('/api/models/manage', async (req, res) => {
   try {
     const { endpoint, modelName, alias } = req.body;
