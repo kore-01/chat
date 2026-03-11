@@ -65,6 +65,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [modelSuccessTimestamp, setModelSuccessTimestamp] = useState(0);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [editingAlias, setEditingAlias] = useState('');
+  const [isEndpointDropdownOpen, setIsEndpointDropdownOpen] = useState(false);
+  const [endpointSearchQuery, setEndpointSearchQuery] = useState('');
   const [testModelStatus, setTestModelStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testModelMessage, setTestModelMessage] = useState('');
   const [showForceAddModal, setShowForceAddModal] = useState(false);
@@ -1628,28 +1630,95 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 z-20">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 z-[210]">
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-900 mb-1.5">
                     所属端点 <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    list="known-endpoints"
-                    type="text"
-                    value={newModelEndpoint}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewModelEndpoint(val);
-                      handleDiscoverModels(val.trim());
-                    }}
-                    placeholder="例如: openai"
-                    className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
-                  />
-                  <datalist id="known-endpoints">
-                    {knownEndpoints.map(ep => (
-                      <option key={ep} value={ep} />
-                    ))}
-                  </datalist>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={isEndpointDropdownOpen ? endpointSearchQuery : newModelEndpoint}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEndpointSearchQuery(val);
+                        if (!isEndpointDropdownOpen) setIsEndpointDropdownOpen(true);
+                      }}
+                      onFocus={() => {
+                        setEndpointSearchQuery('');
+                        setIsEndpointDropdownOpen(true);
+                      }}
+                      placeholder={newModelEndpoint ? newModelEndpoint : "点击选择或输入端点"}
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-mono text-gray-900 pr-8"
+                    />
+                    {newModelEndpoint && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNewModelEndpoint('');
+                          setEndpointSearchQuery('');
+                          setIsEndpointDropdownOpen(false);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
+                        title="清除"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {isEndpointDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[10]" onClick={() => {
+                        setIsEndpointDropdownOpen(false);
+                        if (endpointSearchQuery && !newModelEndpoint) {
+                          setNewModelEndpoint(endpointSearchQuery.trim());
+                          handleDiscoverModels(endpointSearchQuery.trim());
+                        }
+                      }} />
+                      <div className="absolute z-[20] top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl max-h-[160px] overflow-y-auto shadow-lg">
+                        {knownEndpoints
+                          .filter(ep => {
+                            if (!endpointSearchQuery) return true;
+                            return ep.toLowerCase().includes(endpointSearchQuery.toLowerCase());
+                          })
+                          .map((ep, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setNewModelEndpoint(ep);
+                                handleDiscoverModels(ep);
+                                setEndpointSearchQuery('');
+                                setIsEndpointDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 ${
+                                newModelEndpoint === ep ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                              }`}
+                            >
+                              <span className="font-mono text-xs max-w-[200px] truncate">{ep}</span>
+                            </button>
+                          ))
+                        }
+                        {endpointSearchQuery && !knownEndpoints.some(ep => ep.toLowerCase() === endpointSearchQuery.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = endpointSearchQuery.trim();
+                              setNewModelEndpoint(val);
+                              handleDiscoverModels(val);
+                              setEndpointSearchQuery('');
+                              setIsEndpointDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors border-t border-gray-100 bg-gray-50 flex items-center justify-between"
+                          >
+                            <span>使用新端点: <strong className="font-mono">{endpointSearchQuery}</strong></span>
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div>
