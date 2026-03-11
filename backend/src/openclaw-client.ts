@@ -105,6 +105,9 @@ export class OpenClawClient extends EventEmitter {
               this.emit('chat.delta', { sessionKey, runId, text });
             } else if (state === 'final') {
               this.emit('chat.final', { sessionKey, runId, text, message: payload.message });
+            } else if (state === 'error') {
+              // The gateway may send an error state if the LLM request fails dynamically
+              this.emit('chat.error', { sessionKey, runId, error: payload.error || text || 'Unknown stream error' });
             }
             return;
           }

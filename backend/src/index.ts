@@ -739,9 +739,34 @@ app.post('/api/chat', async (req, res) => {
 
     let lastText = '';
     let streamEnded = false;
+    let idleTimeout: NodeJS.Timeout;
+
+    const cleanup = () => {
+      clearTimeout(idleTimeout);
+      client.off('chat.delta', onDelta);
+      client.off('chat.final', onFinal);
+      client.off('chat.error', onError);
+    };
+
+    const resetIdleTimeout = () => {
+      clearTimeout(idleTimeout);
+      // 60s idle timeout between tokens or before first token
+      idleTimeout = setTimeout(() => {
+        if (!streamEnded) {
+          streamEnded = true;
+          cleanup();
+          const errorMsg = lastText ? 'Response interrupted (idle timeout).' : 'Response timed out (no connection).';
+          const rewritten = rewriteOpenClawMediaPaths(lastText || errorMsg);
+          db.saveMessage({ session_key: sessionId, role: 'assistant', content: rewritten, model_used: modelUsed, agent_id: agentId, agent_name: agentName });
+          res.write(`data: ${JSON.stringify({ type: 'final', text: rewritten })}\n\n`);
+          res.end();
+        }
+      }, 60000); 
+    };
 
     const onDelta = (data: { sessionKey: string; runId: string; text: string }) => {
       if (streamEnded) return;
+      resetIdleTimeout();
       lastText = data.text;
       const rewritten = rewriteOpenClawMediaPaths(data.text);
       res.write(`data: ${JSON.stringify({ type: 'delta', text: rewritten })}\n\n`);
@@ -750,6 +775,7 @@ app.post('/api/chat', async (req, res) => {
     const onFinal = (data: { sessionKey: string; runId: string; text: string }) => {
       if (streamEnded) return;
       streamEnded = true;
+      cleanup();
       const finalText = data.text || lastText;
       const rewritten = rewriteOpenClawMediaPaths(finalText);
 
@@ -758,15 +784,24 @@ app.post('/api/chat', async (req, res) => {
 
       res.write(`data: ${JSON.stringify({ type: 'final', text: rewritten })}\n\n`);
       res.end();
+    };
 
-      // Cleanup listeners
-      client.off('chat.delta', onDelta);
-      client.off('chat.final', onFinal);
+    const onError = (data: { sessionKey: string; runId: string; error: string }) => {
+      if (streamEnded) return;
+      streamEnded = true;
+      cleanup();
+      const errorMsg = `❌ Error: ${data.error}`;
+      db.saveMessage({ session_key: sessionId, role: 'assistant', content: errorMsg, model_used: modelUsed, agent_id: agentId, agent_name: agentName });
+      res.write(`data: ${JSON.stringify({ type: 'final', text: errorMsg })}\n\n`);
+      res.end();
     };
 
     // Listen for streaming events
     client.on('chat.delta', onDelta);
     client.on('chat.final', onFinal);
+    client.on('chat.error', onError);
+
+    resetIdleTimeout();
 
     // Send the message (non-blocking)
     const { runId } = await client.sendChatMessageStreaming({
@@ -775,32 +810,25 @@ app.post('/api/chat', async (req, res) => {
       agentId: agentId
     });
 
-    // Safety timeout: if no final event after 120s, end the stream
-    const safetyTimeout = setTimeout(() => {
-      if (!streamEnded) {
-        streamEnded = true;
-        const rewritten = rewriteOpenClawMediaPaths(lastText || 'Response timed out.');
-        db.saveMessage({ session_key: sessionId, role: 'assistant', content: rewritten, model_used: modelUsed, agent_id: agentId, agent_name: agentName });
-        res.write(`data: ${JSON.stringify({ type: 'final', text: rewritten })}\n\n`);
-        res.end();
-        client.off('chat.delta', onDelta);
-        client.off('chat.final', onFinal);
-      }
-    }, 120000);
-
     // Clean up on client disconnect
     req.on('close', () => {
       streamEnded = true;
-      clearTimeout(safetyTimeout);
-      client.off('chat.delta', onDelta);
-      client.off('chat.final', onFinal);
+      cleanup();
     });
 
   } catch (error: any) {
     if (!res.headersSent) {
       res.status(500).json({ error: error.message });
     } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+      const errorMsg = `❌ Error: ${error.message}`;
+      const sessionInfo = db.getSession(sessionId);
+      const agentId = sessionInfo?.agentId || 'main';
+      const character = db.getCharacters().find(c => c.agentId === agentId);
+      const agentName = sessionInfo?.name || character?.name || agentId;
+      const modelUsed = agentProvisioner.readAgentModel(agentId) || agentProvisioner.readAvailableModels().find(m => m.primary)?.id || '';
+      
+      db.saveMessage({ session_key: sessionId, role: 'assistant', content: errorMsg, model_used: modelUsed, agent_id: agentId, agent_name: agentName });
+      res.write(`data: ${JSON.stringify({ type: 'final', text: errorMsg })}\n\n`);
       res.end();
     }
   }

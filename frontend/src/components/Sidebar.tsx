@@ -76,15 +76,7 @@ export default function Sidebar({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
 
-  // Fetch models on mount
-  useEffect(() => {
-    fetch('/api/models')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setAvailableModels(data.models);
-      })
-      .catch(console.error);
-  }, []);
+
   
   // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -95,6 +87,16 @@ export default function Sidebar({
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch models on mount and whenever modal opens to ensure fresh list
+  useEffect(() => {
+    fetch('/api/models')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setAvailableModels(data.models);
+      })
+      .catch(console.error);
+  }, [isModalOpen]);
 
   // Info Modal State
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
