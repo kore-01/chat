@@ -378,13 +378,13 @@ app.post('/api/models/test', async (req, res) => {
       body = {
         model: modelName,
         messages: [{ role: 'user', content: 'hello' }],
-        max_tokens: 1
+        max_tokens: 5
       };
     } else if (apiType.includes('gemini') || apiType.includes('google')) {
       testUrl = `${baseUrl.replace(/\/$/, '')}/models/${modelName}:generateContent?key=${apiKey}`;
       body = {
         contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
-        generationConfig: { maxOutputTokens: 1 }
+        generationConfig: { maxOutputTokens: 5 }
       };
     } else if (apiType.includes('ollama')) {
       testUrl = `${baseUrl.replace(/\/$/, '')}/api/chat`; 
@@ -400,12 +400,13 @@ app.post('/api/models/test', async (req, res) => {
       body = {
         model: modelName,
         messages: [{ role: 'user', content: 'hello' }],
-        max_tokens: 1
+        max_tokens: 5,
+        stream: false
       };
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
       const resp = await fetch(testUrl, {
