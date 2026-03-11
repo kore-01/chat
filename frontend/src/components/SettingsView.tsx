@@ -66,6 +66,13 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [editingAlias, setEditingAlias] = useState('');
   const editAliasInputRef = useRef<HTMLInputElement>(null);
 
+  // --- Endpoint Management State ---
+  type EndpointConfig = { id: string; baseUrl: string; apiKey: string; api: string };
+  const [endpoints, setEndpoints] = useState<EndpointConfig[]>([]);
+  const [isEndpointModalOpen, setIsEndpointModalOpen] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<EndpointConfig | null>(null);
+  const [newEndpointData, setNewEndpointData] = useState<EndpointConfig>({ id: '', baseUrl: '', apiKey: '', api: 'openai-completions' });
+
   useEffect(() => {
     setTestResult(null);
   }, [url, token, password]);
@@ -87,6 +94,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
     fetchCommands();
     fetchModels();
+    fetchEndpoints();
   }, []);
 
   const fetchModels = async () => {
@@ -95,6 +103,18 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
       const data = await res.json();
       if (data.success) {
         setModels(data.models || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchEndpoints = async () => {
+    try {
+      const res = await fetch('/api/endpoints');
+      const data = await res.json();
+      if (data.success) {
+        setEndpoints(data.endpoints || []);
       }
     } catch (err) {
       console.error(err);
@@ -360,6 +380,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         });
         if (res.ok) {
           fetchModels();
+          fetchEndpoints();
           setModelSuccessTimestamp(Date.now());
         } else {
           const data = await res.json().catch(() => ({}));
@@ -496,8 +517,54 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
     }
   };
 
-  // Get distinct endpoints from current models
-  const knownEndpoints = Array.from(new Set(models.map(m => m.id.split('/')[0]).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const openAddEndpointModal = () => {
+    setEditingEndpoint(null);
+    setNewEndpointData({ id: '', baseUrl: '', apiKey: '', api: 'openai-completions' });
+    setIsEndpointModalOpen(true);
+  };
+
+  const openEditEndpointModal = (ep: EndpointConfig) => {
+    setEditingEndpoint(ep);
+    setNewEndpointData({ ...ep });
+    setIsEndpointModalOpen(true);
+  };
+
+  const handleSaveEndpoint = async () => {
+    if (!newEndpointData.id.trim() || !newEndpointData.baseUrl.trim() || !newEndpointData.api) {
+      setModelError('端点名称、URL和接口类型不能为空');
+      setTimeout(() => setModelError(''), 3000);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/endpoints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEndpointData),
+      });
+      if (res.ok) {
+        setIsEndpointModalOpen(false);
+        fetchEndpoints();
+        setModelSuccessTimestamp(Date.now());
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setModelError(data.error || '保存端点失败');
+        setTimeout(() => setModelError(''), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setModelError('保存端点发生网络错误');
+      setTimeout(() => setModelError(''), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get distinct endpoints from current models, merged with actual endpoints objects
+  const knownEndpoints = Array.from(new Set([
+    ...endpoints.map(ep => ep.id),
+    ...models.map(m => m.id.split('/')[0]).filter(Boolean)
+  ])).sort((a, b) => a.localeCompare(b));
 
   const headerTitle = settingsTab === 'gateway' ? '设置 - 网关' : settingsTab === 'general' ? '设置 - 通用' : settingsTab === 'commands' ? '设置 - 快捷指令' : settingsTab === 'models' ? '设置 - 模型管理' : '关于系统';
 
@@ -984,35 +1051,74 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">端点管理</h3>
-                <p className="text-sm text-gray-500 mb-4">可对整个端点下的所有模型进行批量删除。</p>
-                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">端点管理</h3>
+                    <p className="text-sm text-gray-500">管理 API 服务提供商的连接设置，如 Base URL 和 API Key。</p>
+                  </div>
+                  <button
+                    onClick={openAddEndpointModal}
+                    className="h-[38px] px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增端点
+                  </button>
+                </div>
+                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
                   {knownEndpoints.length === 0 ? (
                     <div className="px-6 py-6 text-center text-gray-400 text-sm">暂无端点</div>
                   ) : (
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">端点</th>
+                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">端点名称</th>
+                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">接口类型</th>
+                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">Base URL</th>
                           <th className="px-6 py-3 font-medium text-gray-500 text-sm">模型数量</th>
-                          <th className="px-6 py-3 text-right w-24"></th>
+                          <th className="px-6 py-3 text-right w-24">操作</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {knownEndpoints.map(ep => {
-                          const epCount = models.filter(m => m.id.startsWith(`${ep}/`)).length;
+                        {knownEndpoints.map(epName => {
+                          const epCount = models.filter(m => m.id.startsWith(`${epName}/`)).length;
+                          const epConfig = endpoints.find(e => e.id === epName) || { id: epName, baseUrl: '', apiKey: '', api: 'openai-completions' };
+                          
+                          // Convert api internal name to display name
+                          const displayApi = epConfig.api === 'openai-completions' ? 'OpenAI' : 
+                                             epConfig.api === 'anthropic-messages' ? 'Anthropic' :
+                                             epConfig.api === 'google-genai' ? 'Gemini' : epConfig.api;
+
                           return (
-                            <tr key={ep} className="hover:bg-gray-50/50 transition-colors group">
-                              <td className="px-6 py-4 font-medium text-gray-800 text-base">{ep}</td>
-                              <td className="px-6 py-4 text-gray-500 text-base">{epCount} 个模型</td>
+                            <tr key={epName} className="hover:bg-gray-50/50 transition-colors group">
+                              <td className="px-6 py-4 font-medium text-gray-800 text-base">{epName}</td>
+                              <td className="px-6 py-4 text-gray-500 text-sm">
+                                <span className="px-2 py-0.5 rounded-md bg-gray-100/80 border border-gray-200 text-xs font-mono">
+                                  {displayApi}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 text-sm">
+                                <div className="truncate max-w-[200px]" title={epConfig.baseUrl}>
+                                  {epConfig.baseUrl || '-'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 text-sm">{epCount} 个</td>
                               <td className="px-6 py-4 text-right">
-                                <button
-                                  onClick={() => handleDeleteEndpoint(ep, epCount)}
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                  title="删除整个端点"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                  <button
+                                    onClick={() => openEditEndpointModal(epConfig)}
+                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                    title="编辑端点"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteEndpoint(epName, epCount)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                    title="删除整个端点"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1232,6 +1338,106 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                 className="flex-1 px-4 py-2.5 text-white bg-red-600 hover:bg-red-700 rounded-xl font-semibold transition-all"
               >
                 确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Endpoint Add/Edit Modal */}
+      {isEndpointModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsEndpointModalOpen(false)}></div>
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-200 shadow-xl">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingEndpoint ? '编辑端点设置' : '新增端点'}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  端点名称 (ID) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newEndpointData.id}
+                  onChange={(e) => setNewEndpointData({ ...newEndpointData, id: e.target.value })}
+                  disabled={!!editingEndpoint}
+                  placeholder="例如: openai, my-company"
+                  className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  接口类型 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={newEndpointData.api}
+                  onChange={(e) => setNewEndpointData({ ...newEndpointData, api: e.target.value })}
+                  className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                >
+                  <option value="openai-completions">OpenAI 兼容 (Chat Completions)</option>
+                  <option value="anthropic-messages">Anthropic (Messages)</option>
+                  <option value="google-genai">Google Gemini (GenAI)</option>
+                  <option value="cohere-chat">Cohere Chat</option>
+                  <option value="mistral-chat">Mistral Chat</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1.5 ml-1">取决于提供商的底层 API 格式，通常为 OpenAI 兼容。</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  Base URL <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newEndpointData.baseUrl}
+                  onChange={(e) => setNewEndpointData({ ...newEndpointData, baseUrl: e.target.value })}
+                  placeholder="https://api.openai.com/v1"
+                  className="block w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newEndpointData.apiKey}
+                    onChange={(e) => setNewEndpointData({ ...newEndpointData, apiKey: e.target.value })}
+                    placeholder="sk-..."
+                    className="block w-full px-4 py-2.5 pr-12 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 flex gap-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsEndpointModalOpen(false)}
+                className="flex-[0.8] px-4 py-2.5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl font-semibold transition-all"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEndpoint}
+                disabled={isLoading}
+                className="flex-[1.2] px-4 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                保存端点
               </button>
             </div>
           </div>

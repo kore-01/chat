@@ -431,6 +431,34 @@ app.delete('/api/endpoints/manage', async (req, res) => {
   }
 });
 
+app.get('/api/endpoints', (_req, res) => {
+  try {
+    const endpoints = agentProvisioner.getEndpoints();
+    res.json({ success: true, endpoints });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/endpoints', async (req, res) => {
+  try {
+    const { id, baseUrl, apiKey, api } = req.body;
+    if (!id || !baseUrl || !api) {
+      return res.status(400).json({ success: false, error: 'id, baseUrl, and api are required' });
+    }
+
+    const success = await agentProvisioner.saveEndpoint(id, { baseUrl, apiKey, api });
+    if (success) {
+      // Restart the gateway to apply
+      execPromise('openclaw gateway restart').catch(console.error);
+      return res.json({ success: true });
+    }
+    return res.status(400).json({ success: false, error: 'Failed to save endpoint' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/characters', (_req, res) => {
   const characters = db.getCharacters().map(char => {
     const diskSoul = agentProvisioner.readSoul(char.agentId);

@@ -354,45 +354,105 @@ export class AgentProvisioner {
   }
 
   /**
-   * Delete all models under a given endpoint in openclaw.json
+   * Delete all models under a given endpoint in openclaw.json, and the endpoint itself
    */
   async deleteEndpointConfig(endpoint: string): Promise<number> {
     const configPath = path.join(this.openclawDir, 'openclaw.json');
     if (!fs.existsSync(configPath)) return 0;
 
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    if (!config.agents?.defaults?.models) return 0;
+    let deletedCount = 0;
 
-    const prefix = `${endpoint}/`;
-    const toDelete = Object.keys(config.agents.defaults.models).filter(id => id.startsWith(prefix));
-    if (toDelete.length === 0) return 0;
+    // 1. Delete associated models
+    if (config.agents?.defaults?.models) {
+      const prefix = `${endpoint}/`;
+      const toDelete = Object.keys(config.agents.defaults.models).filter(id => id.startsWith(prefix));
+      
+      for (const modelId of toDelete) {
+        delete config.agents.defaults.models[modelId];
+        deletedCount++;
+      }
 
-    for (const modelId of toDelete) {
-      delete config.agents.defaults.models[modelId];
-    }
+      // Handle primary model fallback
+      const primary = config.agents?.defaults?.model?.primary;
+      if (primary && toDelete.includes(primary)) {
+        const remaining = Object.keys(config.agents.defaults.models);
+        if (remaining.length > 0) {
+          config.agents.defaults.model.primary = remaining[0];
+        } else {
+          delete config.agents.defaults.model.primary;
+        }
+      }
 
-    // Handle primary model fallback
-    const primary = config.agents?.defaults?.model?.primary;
-    if (primary && toDelete.includes(primary)) {
-      const remaining = Object.keys(config.agents.defaults.models);
-      if (remaining.length > 0) {
-        config.agents.defaults.model.primary = remaining[0];
-      } else {
-        delete config.agents.defaults.model.primary;
+      // Fallback agents using any deleted model
+      if (Array.isArray(config.agents.list)) {
+        config.agents.list.forEach((agent: any) => {
+          if (toDelete.includes(agent.model)) {
+            delete agent.model;
+          }
+        });
       }
     }
 
-    // Fallback agents using any deleted model
-    if (Array.isArray(config.agents.list)) {
-      config.agents.list.forEach((agent: any) => {
-        if (toDelete.includes(agent.model)) {
-          delete agent.model;
-        }
-      });
+    // 2. Delete the endpoint provider definition itself
+    if (config.models?.providers?.[endpoint]) {
+      delete config.models.providers[endpoint];
+      deletedCount++; // Ensure count > 0 to signal success
     }
 
+    if (deletedCount > 0) {
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    }
+    
+    return deletedCount;
+  }
+
+  /**
+   * Get the list of all defined endpoints in openclaw.json
+   */
+  getEndpoints(): any[] {
+    const configPath = path.join(this.openclawDir, 'openclaw.json');
+    if (!fs.existsSync(configPath)) return [];
+
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const providers = config?.models?.providers;
+      if (!providers || typeof providers !== 'object') return [];
+
+      return Object.entries(providers).map(([id, meta]: [string, any]) => ({
+        id,
+        baseUrl: meta?.baseUrl || '',
+        apiKey: meta?.apiKey || '',
+        api: meta?.api || 'openai-completions',
+      }));
+    } catch (err) {
+      console.error('Failed to read endpoints from openclaw.json:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Add or update an endpoint provider in openclaw.json
+   */
+  async saveEndpoint(id: string, endpointConfig: { baseUrl: string, apiKey: string, api: string }): Promise<boolean> {
+    const configPath = path.join(this.openclawDir, 'openclaw.json');
+    if (!fs.existsSync(configPath)) return false;
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    if (!config.models) config.models = {};
+    if (!config.models.providers) config.models.providers = {};
+
+    const existing = config.models.providers[id];
+    config.models.providers[id] = {
+      ...existing, // preserve existing models array or other metadata
+      baseUrl: endpointConfig.baseUrl.trim(),
+      apiKey: endpointConfig.apiKey.trim(),
+      api: endpointConfig.api,
+      models: existing?.models || []
+    };
+
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    return toDelete.length;
+    return true;
   }
 
   /**
