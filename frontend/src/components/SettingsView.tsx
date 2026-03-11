@@ -84,6 +84,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   // --- Model Discovery State ---
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [addModelError, setAddModelError] = useState('');
+  const [existingModelTestStatus, setExistingModelTestStatus] = useState<Record<string, { status: 'testing'|'success'|'error', message?: string }>>({}); 
+  const [isTestingExisting, setIsTestingExisting] = useState(false);
   const [discoveredModels, setDiscoveredModels] = useState<string[]>([]);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -1281,8 +1283,51 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
               {activeModelSubTab === 'models' && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">现有模型</h3>
-                <p className="text-sm text-gray-500 mb-4">按模型 ID 升序排列，悬停列可进行编辑别名、设为默认或删除操作。</p>
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">现有模型</h3>
+                    <p className="text-sm text-gray-500">按模型 ID 升序排列，悬停列可进行编辑别名、设为默认或删除操作。</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setIsTestingExisting(true);
+                      setExistingModelTestStatus({});
+                      const testPromises = models.map(async (model) => {
+                        const slashIndex = model.id.indexOf('/');
+                        if (slashIndex === -1) return;
+                        const endpoint = model.id.substring(0, slashIndex);
+                        const modelName = model.id.substring(slashIndex + 1);
+                        setExistingModelTestStatus(prev => ({...prev, [model.id]: { status: 'testing' }}));
+                        try {
+                          const res = await fetch('/api/models/test', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ endpoint, modelName })
+                          });
+                          const data = await res.json().catch(() => ({}));
+                          if (data.success) {
+                            setExistingModelTestStatus(prev => ({...prev, [model.id]: { status: 'success' }}));
+                          } else {
+                            setExistingModelTestStatus(prev => ({...prev, [model.id]: { status: 'error', message: data.error || '检测失败' }}));
+                          }
+                        } catch (err: any) {
+                          setExistingModelTestStatus(prev => ({...prev, [model.id]: { status: 'error', message: '网络错误' }}));
+                        }
+                      });
+                      await Promise.all(testPromises);
+                      setIsTestingExisting(false);
+                    }}
+                    disabled={isTestingExisting || models.length === 0}
+                    className={`h-[36px] px-4 rounded-lg text-sm font-medium transition-all border flex items-center gap-1.5 shrink-0 ${
+                      isTestingExisting || models.length === 0
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                        : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                    }`}
+                  >
+                    {isTestingExisting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    检测
+                  </button>
+                </div>
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -1323,11 +1368,20 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              {model.primary ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                  默认
-                                </span>
-                              ) : null}
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                  const testData = existingModelTestStatus[model.id];
+                                  if (testData?.status === 'testing') return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+                                  if (testData?.status === 'success') return <Check className="w-4 h-4 text-green-500" />;
+                                  if (testData?.status === 'error') return <span title={testData.message}><X className="w-4 h-4 text-red-500" /></span>;
+                                  return null;
+                                })()}
+                                {model.primary ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                    默认
+                                  </span>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-right">
                               {editingModelId === model.id ? (
