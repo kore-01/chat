@@ -517,7 +517,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         })
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
+
+      if (res.ok && data.success) {
         setAddModelTestStatus('success');
         setAddModelTestMessage(`模型连通性良好 (${data.latency}ms)`);
         return true;
