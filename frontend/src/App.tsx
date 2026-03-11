@@ -9,10 +9,16 @@ export type SettingsTab = 'gateway' | 'general' | 'models' | 'commands' | 'about
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>(() => {
+    // 1. First check if the browser history already has a state (e.g. from page refresh)
+    const historyView = window.history.state?.view as ViewType;
+    if (historyView) return historyView;
+    // 2. Otherwise fallback to localStorage
     return (localStorage.getItem('clawui_current_view') as ViewType) || 'chat';
   });
   const [isConnected, setIsConnected] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>(() => {
+    const historyTab = window.history.state?.tab as SettingsTab;
+    if (historyTab) return historyTab;
     return (localStorage.getItem('clawui_settings_tab') as SettingsTab) || 'gateway';
   });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = checking
@@ -25,8 +31,11 @@ export default function App() {
 
   // --- History API Integration for Back Gesture ---
   useEffect(() => {
-    // Initialize base state
-    window.history.replaceState({ view: currentView, tab: settingsTab, menu: isMobileMenuOpen }, '');
+    // Only replace state if it doesn't already exist from the browser, to avoid overriding
+    // a valid restored state with a stale 'initial' state effect.
+    if (!window.history.state || !window.history.state.view) {
+      window.history.replaceState({ view: currentView, tab: settingsTab, menu: isMobileMenuOpen }, '');
+    }
 
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.view) {
