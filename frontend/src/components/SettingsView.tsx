@@ -1079,31 +1079,30 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
               {activeModelSubTab === 'endpoints' && (
               <div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-start sm:items-center mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">端点管理</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">端点管理</h3>
                     <p className="text-sm text-gray-500">管理 API 服务提供商的连接设置，如 Base URL 和 API Key。</p>
                   </div>
                   <button
                     onClick={openAddEndpointModal}
-                    className="h-[38px] px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all flex items-center gap-1.5"
+                    className="h-[40px] px-5 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all flex items-center gap-1.5 shrink-0"
                   >
                     <Plus className="w-4 h-4" />
                     新增端点
                   </button>
                 </div>
-                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-6 shadow-sm">
                   {knownEndpoints.length === 0 ? (
-                    <div className="px-6 py-6 text-center text-gray-400 text-sm">暂无端点</div>
+                    <div className="px-6 py-10 text-center text-gray-400 text-sm">暂无端点</div>
                   ) : (
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">端点名称</th>
-                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">接口类型</th>
-                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">Base URL</th>
-                          <th className="px-6 py-3 font-medium text-gray-500 text-sm">模型数量</th>
-                          <th className="px-6 py-3 text-right w-24">操作</th>
+                        <tr className="bg-white border-b border-gray-100">
+                          <th className="px-6 py-4 font-medium text-gray-500 text-sm w-[40%]">端点名称</th>
+                          <th className="px-6 py-4 font-medium text-gray-500 text-sm w-[20%]">接口类型</th>
+                          <th className="px-6 py-4 font-medium text-gray-500 text-sm text-center w-[20%]">模型<br/>数量</th>
+                          <th className="px-6 py-4 font-bold text-gray-900 text-base text-center w-[20%]">操作</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1118,21 +1117,23 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                              epConfig.api === 'ollama' ? 'Ollama' : epConfig.api;
 
                           return (
-                            <tr key={epName} className="hover:bg-gray-50/50 transition-colors group">
-                              <td className="px-6 py-4 font-medium text-gray-800 text-base">{epName}</td>
-                              <td className="px-6 py-4 text-gray-500 text-sm">
-                                <span className="px-2 py-0.5 rounded-md bg-gray-100/80 border border-gray-200 text-xs font-mono">
-                                  {displayApi}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-gray-500 text-sm">
-                                <div className="truncate max-w-[200px]" title={epConfig.baseUrl}>
+                            <tr key={epName} className="hover:bg-gray-50/50 transition-colors group bg-white">
+                              <td className="px-6 py-5 align-top">
+                                <div className="font-medium text-gray-800 text-base mb-2">{epName}</div>
+                                <div className="text-gray-500 text-sm break-all max-w-sm">
                                   {epConfig.baseUrl || '-'}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-gray-500 text-sm">{epCount} 个</td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                              <td className="px-6 py-5 align-top pt-5">
+                                <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-xs font-medium">
+                                  {displayApi}
+                                </span>
+                              </td>
+                              <td className="px-6 py-5 align-top text-gray-500 text-sm text-center pt-5 lg:pt-8">
+                                {epCount} 个
+                              </td>
+                              <td className="px-6 py-5 align-top text-center pt-5 lg:pt-8">
+                                <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                   <button
                                     onClick={() => openEditEndpointModal(epConfig)}
                                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
