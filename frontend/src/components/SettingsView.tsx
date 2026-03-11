@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Check, X, Loader2, Edit2, Trash2, Plus, Menu, Github, Send, ShoppingBag } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Loader2, Edit2, Trash2, Plus, Menu, Github, Send, ShoppingBag, Activity } from 'lucide-react';
 import { SettingsTab } from '../App';
 
 interface SettingsViewProps {
@@ -205,6 +205,26 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
       }
     } catch (err: any) {
       setIndividualTestStatus(prev => ({...prev, [modelId]: { status: 'error', message: '网络错误' }}));
+    }
+  };
+
+  const handleTestExistingSingleModel = async (fullModelId: string, endpoint: string, modelName: string) => {
+    setExistingModelTestStatus(prev => ({ ...prev, [fullModelId]: { status: 'testing' } }));
+    try {
+      const res = await fetch('/api/models/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint, modelName })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setExistingModelTestStatus(prev => ({ ...prev, [fullModelId]: { status: 'success' } }));
+      } else {
+        setExistingModelTestStatus(prev => ({ ...prev, [fullModelId]: { status: 'error', message: data.error || '连通性测试失败' } }));
+      }
+    } catch (err: any) {
+      setExistingModelTestStatus(prev => ({ ...prev, [fullModelId]: { status: 'error', message: '网络错误' } }));
     }
   };
 
@@ -1412,6 +1432,22 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                       <Check className="w-4 h-4" />
                                     </button>
                                   )}
+                                  <button
+                                    onClick={() => {
+                                      const [endpoint, ...nameParts] = model.id.split('/');
+                                      const modelName = nameParts.join('/');
+                                      handleTestExistingSingleModel(model.id, endpoint, modelName);
+                                    }}
+                                    disabled={existingModelTestStatus[model.id]?.status === 'testing' || isTestingExisting}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                      existingModelTestStatus[model.id]?.status === 'testing' || isTestingExisting
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                                    }`}
+                                    title="测试可用性"
+                                  >
+                                    <Activity className="w-4 h-4" />
+                                  </button>
                                   <button
                                     onClick={() => handleDeleteModel(model.id, model.primary)}
                                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
