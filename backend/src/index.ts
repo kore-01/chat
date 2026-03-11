@@ -503,21 +503,14 @@ app.post('/api/characters', async (req, res) => {
     // Update model in config if changed
     const modelChanged = await agentProvisioner.updateModel(char.agentId, char.model);
     if (modelChanged) {
-      try { await execPromise('openclaw gateway restart'); } catch (e) {
-        console.error('Failed to restart gateway:', e);
-      }
+      // Gateway auto-reloads config
     }
   }
   
   db.saveCharacter(char);
 
   if (configChanged) {
-      console.log('OpenClaw config changed for new agent, restarting gateway...');
-      try {
-          await execPromise('openclaw gateway restart');
-      } catch (e) {
-          console.error('Failed to restart gateway automatically:', e);
-      }
+      console.log('OpenClaw config changed for new agent, auto-reloading...');
   }
 
   res.json({ success: true, character: char });
@@ -536,12 +529,7 @@ app.delete('/api/characters/:id', async (req, res) => {
     if (character.agentId && character.agentId !== 'main') {
       const configChanged = await agentProvisioner.deprovision(character.agentId);
       if (configChanged) {
-        console.log(`Agent "${character.agentId}" fully removed, restarting gateway...`);
-        try {
-          await execPromise('openclaw gateway restart');
-        } catch (e) {
-          console.error('Failed to restart gateway automatically:', e);
-        }
+        console.log(`Agent "${character.agentId}" fully removed, gateway auto-reloading...`);
       }
     }
 
@@ -631,7 +619,7 @@ app.put('/api/sessions/:id', async (req, res) => {
     // Model update might require gateway restart
     const modelChanged = await agentProvisioner.updateModel(session.agentId, model);
     if (modelChanged) {
-      try { await execPromise('openclaw gateway restart'); } catch(e) {}
+      // Gateway auto-reloads config
     }
   }
 
@@ -655,7 +643,7 @@ app.delete('/api/sessions/:id', async (req, res) => {
     if (agentId && agentId !== 'main') {
       const configChanged = await agentProvisioner.deprovision(agentId);
       if (configChanged) {
-        try { await execPromise('openclaw gateway restart'); } catch(e) {}
+        // Gateway auto-reloads config
       }
     }
     res.json({ success: true });
