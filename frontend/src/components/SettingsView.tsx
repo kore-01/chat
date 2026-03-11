@@ -218,12 +218,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
     try {
       await Promise.all(testPromises);
-      setAddModelTestStatus('success');
-      setAddModelTestMessage('所有过滤模型测试完成');
     } catch (error: any) {
-      setAddModelTestStatus('error');
-      setAddModelTestMessage('请求连通性接口失败');
-      setAddModelError(error.message || '网络连接失败');
+      setAddModelError(error.message || '批量测试部分失败');
     }
   };
 
