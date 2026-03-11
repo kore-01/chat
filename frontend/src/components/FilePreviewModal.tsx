@@ -79,7 +79,15 @@ function ZoomableWrapper({ children, center = false }: { children: React.ReactNo
         panning={{ disabled: !isZoomed, velocityDisabled: true }} // Disable JS pan when unzoomed to restore native 1-finger scroll
         alignmentAnimation={{ animationTime: 200 }}
         onZoom={(ref) => setIsZoomed(ref.state.scale > 1)}
-        onZoomStop={(ref) => setIsZoomed(ref.state.scale > 1)}
+        onZoomStop={(ref) => {
+          const zoomed = ref.state.scale > 1.05; // give a slight buffer for floating point
+          setIsZoomed(zoomed);
+          if (!zoomed) {
+            // Snap back to exactly center (x=0, y=0) when fully zoomed out
+            // This fixes the issue where panning off-axis leaves blank space 
+            ref.resetTransform();
+          }
+        }}
         onInit={(ref) => setIsZoomed(ref.state.scale > 1)}
         // `TransformWrapper` renders a hidden dom element that wraps `TransformComponent`.
         // By default it grows to `max-content`. Adding basic dimension constraint via CSS.
