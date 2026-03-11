@@ -1850,7 +1850,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       const visibleDiscoveredModels = discoveredModels.filter(m => {
                         if (showOnlyConnected && individualTestStatus[m]?.status !== 'success') return false;
                         return m.toLowerCase().includes(modelSearchQuery.toLowerCase());
-                      });
+                      }).sort((a, b) => a.localeCompare(b));
                       const isAnyTesting = Object.values(individualTestStatus).some(t => t.status === 'testing');
                       const hasAnyTests = Object.keys(individualTestStatus).length > 0;
 
