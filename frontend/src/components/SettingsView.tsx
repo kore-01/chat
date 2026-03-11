@@ -56,13 +56,19 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
 
   // --- Model Management State ---
-  const [activeModelSubTab, setActiveModelSubTab] = useState<'endpoints' | 'models'>('endpoints');
+  const [activeModelSubTab, setActiveModelSubTab] = useState<'endpoints' | 'models'>(() => {
+    return (localStorage.getItem('openclaw_activeModelSubTab') as 'endpoints' | 'models') || 'endpoints';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('openclaw_activeModelSubTab', activeModelSubTab);
+  }, [activeModelSubTab]);
   const [models, setModels] = useState<{ id: string; alias?: string; primary: boolean }[]>([]);
   const [newModelEndpoint, setNewModelEndpoint] = useState('');
   const [newModelName, setNewModelName] = useState('');
   const [newModelAlias, setNewModelAlias] = useState('');
   const [modelError, setModelError] = useState('');
-  const [modelSuccessTimestamp, setModelSuccessTimestamp] = useState(0);
+
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [editingAlias, setEditingAlias] = useState('');
   const [isEndpointDropdownOpen, setIsEndpointDropdownOpen] = useState(false);
@@ -79,19 +85,17 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [showOnlyConnected, setShowOnlyConnected] = useState(false);
   const [individualTestStatus, setIndividualTestStatus] = useState<Record<string, { status: 'testing'|'success'|'error', message?: string }>>({});
-  const [isTestingAll, setIsTestingAll] = useState(false);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [modelDropdownMaxHeight, setModelDropdownMaxHeight] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsModelDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isModelDropdownOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const availableSpace = window.innerHeight - (rect.top + 80) - 24;
+      setModelDropdownMaxHeight(Math.max(200, availableSpace));
+    }
+  }, [isModelDropdownOpen]);
 
   // --- Endpoint Management State ---
   type EndpointConfig = { id: string; baseUrl: string; apiKey: string; api: string };
@@ -202,19 +206,10 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
   const handleTestAllFiltered = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (isTestingAll) return;
     const filtered = discoveredModels.filter(m => m.toLowerCase().includes(modelSearchQuery.toLowerCase()));
-    
-    setIsTestingAll(true);
-    try {
-      const promises = [];
-      for (const m of filtered) {
-         if (existingModelIds.has(`${newModelEndpoint.trim()}/${m}`)) continue;
-         promises.push(handleTestSingleModel(m));
-      }
-      await Promise.allSettled(promises);
-    } finally {
-      setIsTestingAll(false);
+    for (const m of filtered) {
+       if (existingModelIds.has(`${newModelEndpoint.trim()}/${m}`)) continue;
+       handleTestSingleModel(m); // Do it in parallel rather than blocking sequentially
     }
   };
 
@@ -453,7 +448,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         });
         if (res.ok) {
           fetchModels();
-          setModelSuccessTimestamp(Date.now());
+  
         } else {
           const data = await res.json().catch(() => ({}));
           setModelError(data.error || '删除模型失败');
@@ -468,7 +463,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         if (res.ok) {
           fetchModels();
           fetchEndpoints();
-          setModelSuccessTimestamp(Date.now());
+  
         } else {
           const data = await res.json().catch(() => ({}));
           setModelError(data.error || '删除端点失败');
@@ -590,7 +585,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
       });
       if (res.ok) {
         fetchModels();
-        setModelSuccessTimestamp(Date.now());
+
       } else {
         const data = await res.json().catch(() => ({}));
         setModelError(data.error || '设置默认模型失败');
@@ -635,7 +630,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         setEditingModelId(null);
         setEditingAlias('');
         fetchModels();
-        setModelSuccessTimestamp(Date.now());
+
       } else {
         const data = await res.json().catch(() => ({}));
         setModelError(data.error || '修改别名失败');
@@ -678,7 +673,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
       if (res.ok) {
         setIsEndpointModalOpen(false);
         fetchEndpoints();
-        setModelSuccessTimestamp(Date.now());
+
       } else {
         const data = await res.json().catch(() => ({}));
         setModelError(data.error || '保存端点失败');
@@ -1152,6 +1147,9 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                           setNewModelAlias('');
                           setTestModelStatus('idle');
                           setTestModelMessage('');
+                          setDiscoveredModels([]);
+                          setModelSearchQuery('');
+                          setIndividualTestStatus({});
                           setIsAddModelModalOpen(true);
                       }}
                       className="h-[40px] px-5 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-all flex items-center gap-1.5 shrink-0"
@@ -1167,12 +1165,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       {modelError}
                     </div>
                   )}
-                  {modelSuccessTimestamp > 0 && Date.now() - modelSuccessTimestamp < 3000 && (
-                    <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-xl border border-green-100 flex items-center gap-2 animate-in fade-in duration-300">
-                      <Check className="w-4 h-4 shrink-0" />
-                      操作成功，网关配置已更新
-                    </div>
-                  )}
+
                   {testModelStatus !== 'idle' && (
                     <div className={`mb-4 p-3 text-sm rounded-xl border flex items-center gap-2 animate-in fade-in duration-300 ${
                       testModelStatus === 'testing' ? 'bg-blue-50 text-blue-600 border-blue-100' :
@@ -1759,7 +1752,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       setNewModelName(e.target.value);
                       setModelSearchQuery(e.target.value);
                     }}
-                    placeholder={isDiscovering ? '正在发现模型...' : (discoveredModels.length > 0 ? `已发现 ${discoveredModels.length} 个模型 (点击或输入搜索)` : '例如: gpt-4o (点击加载可用列表)')}
+                    placeholder={isDiscovering ? '正在发现模型...' : (discoveredModels.length > 0 ? `发现 ${discoveredModels.length} 个模型（点击或输入关键字过滤，也可以直接输入模型ID）` : '例如: gpt-4o (点击加载可用列表)')}
                     className="bg-transparent border-none outline-none w-full text-sm placeholder-gray-400 py-1"
                     onFocus={() => setIsModelDropdownOpen(true)}
                   />
@@ -1780,102 +1773,134 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                 </div>
 
                 {isModelDropdownOpen && (discoveredModels.length > 0 || isDiscovering) && (
-                  <div className="absolute z-50 left-0 right-0 top-[80px] bg-white border border-gray-200 rounded-xl shadow-2xl max-h-[350px] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/95 backdrop-blur">
-                      <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        发现的模型 ({discoveredModels.length})
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowOnlyConnected(!showOnlyConnected); }}
-                          className={`text-xs flex items-center gap-1 font-medium px-2 py-1.5 rounded-md transition-colors border ${
-                            showOnlyConnected 
-                              ? 'text-green-700 hover:text-green-800 bg-green-50 hover:bg-green-100 border-green-200'
-                              : 'text-gray-600 hover:text-gray-800 bg-white hover:bg-gray-100 border-gray-200'
-                          }`}
-                        >
-                          {showOnlyConnected ? '显示全部模型' : '仅显示已联通'}
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleTestAllFiltered(); }}
-                          className="text-xs flex items-center gap-1 text-indigo-700 font-medium hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 rounded-md transition-colors border border-indigo-100"
-                        >
-                          一键检测过滤项
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="overflow-y-auto flex-1 p-1.5 space-y-0.5 min-h-[100px]">
-                      {isDiscovering && discoveredModels.length === 0 && (
-                        <div className="py-8 text-center text-gray-400 text-sm flex flex-col items-center justify-center gap-3">
-                          <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> 
-                          正在联机拉取端点模型列表...
-                        </div>
-                      )}
-                      {(() => {
-                        const visibleDiscoveredModels = discoveredModels.filter(m => {
-                          if (showOnlyConnected && individualTestStatus[m]?.status !== 'success') return false;
-                          return m.toLowerCase().includes(modelSearchQuery.toLowerCase());
-                        });
-                        
-                        if (!isDiscovering && visibleDiscoveredModels.length === 0) {
-                          return (
-                            <div className="py-8 text-center text-gray-400 text-sm">
-                              未能找到匹配 "{modelSearchQuery}" 的模型
-                            </div>
-                          );
-                        }
+                  <>
+                  <div className="fixed inset-0 z-[40]" onClick={(e) => { e.stopPropagation(); setIsModelDropdownOpen(false); }} />
+                  <div 
+                    className="absolute z-50 left-0 right-0 top-[80px] bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                    style={{ maxHeight: modelDropdownMaxHeight ? `${modelDropdownMaxHeight}px` : '350px' }}
+                  >
+                    {(() => {
+                      const visibleDiscoveredModels = discoveredModels.filter(m => {
+                        if (showOnlyConnected && individualTestStatus[m]?.status !== 'success') return false;
+                        return m.toLowerCase().includes(modelSearchQuery.toLowerCase());
+                      });
+                      const isAnyTesting = Object.values(individualTestStatus).some(t => t.status === 'testing');
+                      const hasAnyTests = Object.keys(individualTestStatus).length > 0;
 
-                        return visibleDiscoveredModels.map(m => {
-                          const isExisting = existingModelIds.has(`${newModelEndpoint.trim()}/${m}`);
-                          const testData = individualTestStatus[m];
-                          const isSelected = newModelName === m;
-
-                          return (
-                            <div 
-                              key={m}
-                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${
-                              isExisting ? 'opacity-60 bg-gray-50/50 cursor-not-allowed' :
-                              isSelected ? 'bg-blue-50/80 border-blue-100 font-medium cursor-pointer shadow-sm' : 'hover:bg-gray-100 cursor-pointer border-transparent'
-                            } border`}
-                            onClick={(e) => {
-                              if (isExisting) return;
-                              e.preventDefault();
-                              if (isSelected) {
-                                setNewModelName('');
-                              } else {
-                                setNewModelName(m);
-                                setIsModelDropdownOpen(false);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-3 overflow-hidden flex-1">
-                              <span className={`truncate ${isSelected ? 'text-blue-900' : 'text-gray-700'}`} title={m}>{m}</span>
-                              {isExisting && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full ml-1 shrink-0 font-medium">已在使用</span>}
-                            </div>
-
-                            {!isExisting && (
-                              <div className="flex items-center gap-2 shrink-0 ml-3 bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100" onClick={e => e.stopPropagation()}>
-                                {testData?.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
-                                {testData?.status === 'success' && <span title="有效"><Check className="w-3.5 h-3.5 text-green-500" /></span>}
-                                {testData?.status === 'error' && <span title={testData.message}><X className="w-3.5 h-3.5 text-red-500" /></span>}
-                                
-                                <button 
-                                  onClick={(e) => handleTestSingleModel(m, e)}
-                                  className="text-xs text-gray-500 hover:text-indigo-600 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
-                                  title="独立检测此模型"
+                      return (
+                        <>
+                          <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 bg-gray-50/95 backdrop-blur">
+                            <span className="text-sm text-gray-700 font-semibold flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                              模型数 ({visibleDiscoveredModels.length})
+                            </span>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center bg-gray-200/50 p-0.5 rounded-lg border border-gray-200/50">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowOnlyConnected(false); }}
+                                  disabled={isAnyTesting}
+                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all ${
+                                    !showOnlyConnected
+                                      ? 'bg-white text-gray-800 shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                  } ${isAnyTesting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                  连通检测
+                                  显示全部
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowOnlyConnected(true); }}
+                                  disabled={isAnyTesting || !hasAnyTests}
+                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all ${
+                                    showOnlyConnected
+                                      ? 'bg-white text-green-700 shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                  } ${(isAnyTesting || !hasAnyTests) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  title={!hasAnyTests ? "尚未进行任何连通性检测" : ""}
+                                >
+                                  仅显示有效
                                 </button>
                               </div>
-                            )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleTestAllFiltered(); }}
+                                disabled={isAnyTesting || visibleDiscoveredModels.length === 0}
+                                className={`text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all border ${
+                                  isAnyTesting || visibleDiscoveredModels.length === 0
+                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                    : 'text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-100 shadow-sm'
+                                }`}
+                              >
+                                {isAnyTesting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                一键检测
+                              </button>
+                            </div>
                           </div>
-                        );
-                      });
+                          
+                          <div className="overflow-y-auto flex-1 p-1.5 space-y-0.5 min-h-[100px]" onClick={() => setIsModelDropdownOpen(false)}>
+                            {isDiscovering && discoveredModels.length === 0 && (
+                              <div className="py-8 text-center text-gray-400 text-sm flex flex-col items-center justify-center gap-3">
+                                <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> 
+                                正在联机拉取端点模型列表...
+                              </div>
+                            )}
+                            
+                            {!isDiscovering && visibleDiscoveredModels.length === 0 && (
+                              <div className="py-8 text-center text-gray-400 text-sm">
+                                {showOnlyConnected ? '没有找到检测成功的模型' : `未能找到匹配 "${modelSearchQuery}" 的模型`}
+                              </div>
+                            )}
+                            {visibleDiscoveredModels.map(m => {
+                              const isExisting = existingModelIds.has(`${newModelEndpoint.trim()}/${m}`);
+                              const testData = individualTestStatus[m];
+                              const isSelected = newModelName === m;
+
+                              return (
+                                <div 
+                                  key={m}
+                                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${
+                                    isExisting ? 'opacity-60 bg-gray-50/50 cursor-not-allowed' :
+                                    isSelected ? 'bg-blue-50/80 border-blue-100 font-medium cursor-pointer shadow-sm' : 'hover:bg-gray-100 cursor-pointer border-transparent'
+                                  } border`}
+                                  onClick={(e) => {
+                                    if (isExisting) return;
+                                    e.preventDefault();
+                                    if (isSelected) {
+                                      setNewModelName('');
+                                    } else {
+                                      setNewModelName(m);
+                                      setIsModelDropdownOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                    <span className={`truncate ${isSelected ? 'text-blue-900' : 'text-gray-700'}`} title={m}>{m}</span>
+                                    {isExisting && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full ml-1 shrink-0 font-medium">已在使用</span>}
+                                  </div>
+
+                                  {!isExisting && (
+                                    <div className="flex items-center gap-2 shrink-0 ml-3 bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100" onClick={e => e.stopPropagation()}>
+                                      {testData?.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+                                      {testData?.status === 'success' && <span title="有效"><Check className="w-3.5 h-3.5 text-green-500" /></span>}
+                                      {testData?.status === 'error' && <span title={testData.message}><X className="w-3.5 h-3.5 text-red-500" /></span>}
+                                      
+                                      <button 
+                                        onClick={(e) => handleTestSingleModel(m, e)}
+                                        className="text-xs text-gray-500 hover:text-indigo-600 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                                        title="独立检测此模型"
+                                      >
+                                        连通检测
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
                     })()}
-                    </div>
                   </div>
+                  </>
                 )}
               </div>
             </div>
