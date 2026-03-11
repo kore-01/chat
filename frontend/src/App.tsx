@@ -8,19 +8,23 @@ export type ViewType = 'chat' | 'settings';
 export type SettingsTab = 'gateway' | 'general' | 'models' | 'commands' | 'about';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewType>(() => {
-    // 1. First check if the browser history already has a state (e.g. from page refresh)
-    const historyView = window.history.state?.view as ViewType;
-    if (historyView) return historyView;
-    // 2. Otherwise fallback to localStorage
-    return (localStorage.getItem('clawui_current_view') as ViewType) || 'chat';
-  });
+  const getHashState = () => {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return { view: 'chat' as ViewType, tab: 'gateway' as SettingsTab };
+    
+    if (hash === 'settings') return { view: 'settings' as ViewType, tab: 'gateway' as SettingsTab };
+    if (hash.startsWith('settings/')) {
+      const tab = hash.split('/')[1] as SettingsTab;
+      return { view: 'settings' as ViewType, tab };
+    }
+    return { view: 'chat' as ViewType, tab: 'gateway' as SettingsTab };
+  };
+
+  const initialState = getHashState();
+
+  const [currentView, setCurrentView] = useState<ViewType>(initialState.view);
   const [isConnected, setIsConnected] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>(() => {
-    const historyTab = window.history.state?.tab as SettingsTab;
-    if (historyTab) return historyTab;
-    return (localStorage.getItem('clawui_settings_tab') as SettingsTab) || 'gateway';
-  });
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>(initialState.tab);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = checking
   const [activeSessionId, setActiveSessionId] = useState<string>(() => {
     return localStorage.getItem('clawui_active_session') || '';
@@ -29,56 +33,48 @@ export default function App() {
   const [sessions, setSessions] = useState<{id: string, name: string, characterId?: string, model?: string}[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
 
-  // --- History API Integration for Back Gesture ---
+  // --- Hash Routing Integration for Back Gesture & Deep Linking ---
   useEffect(() => {
-    // Only replace state if it doesn't already exist from the browser, to avoid overriding
-    // a valid restored state with a stale 'initial' state effect.
-    if (!window.history.state || !window.history.state.view) {
-      window.history.replaceState({ view: currentView, tab: settingsTab, menu: isMobileMenuOpen }, '');
-    }
-
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state && event.state.view) {
-        // If menu was open and we're going back to a closed menu state, close it
-        if (isMobileMenuOpen && !event.state.menu) {
-          setIsMobileMenuOpen(false);
-          return;
-        }
-        
-        setCurrentView(event.state.view);
-        if (event.state.tab) setSettingsTab(event.state.tab);
-        if (event.state.menu !== undefined) setIsMobileMenuOpen(event.state.menu);
-      }
+    const handleHashChange = () => {
+      const { view, tab } = getHashState();
+      setCurrentView(view);
+      setSettingsTab(tab);
+      // If we navigate back via hash, close mobile menu
+      setIsMobileMenuOpen(false);
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [isMobileMenuOpen, currentView, settingsTab]);
-
-  // Wrapper for view/tab changes that should push to history
-  const navigateTo = (view: ViewType, tab?: SettingsTab, openMenu?: boolean) => {
-    const nextTab = tab || settingsTab;
-    const nextOpen = openMenu !== undefined ? openMenu : isMobileMenuOpen;
-    if (view !== currentView || nextTab !== settingsTab || nextOpen !== isMobileMenuOpen) {
-      window.history.pushState({ view, tab: nextTab, menu: nextOpen }, '');
-      setCurrentView(view);
-      if (tab) setSettingsTab(tab);
-      setIsMobileMenuOpen(nextOpen);
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Set initial hash if it's empty to normalize URL
+    if (!window.location.hash) {
+      window.location.hash = currentView === 'settings' ? `settings/${settingsTab}` : 'chat';
     }
-  };
 
-  // Sync activeSessionId to localStorage
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Sync view state to hash and localStorage
   useEffect(() => {
-    if (activeSessionId) {
-      localStorage.setItem('clawui_active_session', activeSessionId);
+    const newHash = currentView === 'settings' ? `settings/${settingsTab}` : 'chat';
+    if (window.location.hash.replace('#', '') !== newHash) {
+      window.location.hash = newHash;
     }
-  }, [activeSessionId]);
-
-  // Sync view state to localStorage
-  useEffect(() => {
     localStorage.setItem('clawui_current_view', currentView);
     localStorage.setItem('clawui_settings_tab', settingsTab);
   }, [currentView, settingsTab]);
+
+  // Wrapper for view/tab changes
+  const navigateTo = (view: ViewType, tab?: SettingsTab, openMenu?: boolean) => {
+    const nextTab = tab || settingsTab;
+    const nextOpen = openMenu !== undefined ? openMenu : isMobileMenuOpen;
+    
+    if (view !== currentView || nextTab !== settingsTab || nextOpen !== isMobileMenuOpen) {
+      setCurrentView(view);
+      if (tab) setSettingsTab(tab);
+      setIsMobileMenuOpen(nextOpen);
+      // Hash is updated automatically by the useEffect above
+    }
+  };
 
   const reloadSessions = async () => {
     try {
