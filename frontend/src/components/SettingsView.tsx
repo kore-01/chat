@@ -1792,7 +1792,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                           <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 bg-gray-50/95 backdrop-blur">
                             <span className="text-sm text-gray-700 font-semibold flex items-center gap-1.5">
                               <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                              模型数 ({visibleDiscoveredModels.length})
+                              模型 ({visibleDiscoveredModels.length})
                             </span>
                             
                             <div className="flex items-center gap-3">
@@ -1800,25 +1800,25 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setShowOnlyConnected(false); }}
                                   disabled={isAnyTesting}
-                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all ${
+                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all border ${
                                     !showOnlyConnected
-                                      ? 'bg-white text-gray-800 shadow-sm'
-                                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                      ? 'bg-white text-gray-800 border-gray-200'
+                                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
                                   } ${isAnyTesting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                  显示全部
+                                  全部
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setShowOnlyConnected(true); }}
                                   disabled={isAnyTesting || !hasAnyTests}
-                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all ${
+                                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-all border ${
                                     showOnlyConnected
-                                      ? 'bg-white text-green-700 shadow-sm'
-                                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                      ? 'bg-white text-green-700 border-green-200'
+                                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
                                   } ${(isAnyTesting || !hasAnyTests) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                   title={!hasAnyTests ? "尚未进行任何连通性检测" : ""}
                                 >
-                                  仅显示有效
+                                  有效
                                 </button>
                               </div>
                               <button
@@ -1827,11 +1827,11 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                 className={`text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all border ${
                                   isAnyTesting || visibleDiscoveredModels.length === 0
                                     ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                    : 'text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-100 shadow-sm'
+                                    : 'text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
                                 }`}
                               >
                                 {isAnyTesting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                一键检测
+                                检测
                               </button>
                             </div>
                           </div>
@@ -1878,17 +1878,17 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                   </div>
 
                                   {!isExisting && (
-                                    <div className="flex items-center gap-2 shrink-0 ml-3 bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100" onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center gap-2 shrink-0 ml-3" onClick={e => e.stopPropagation()}>
                                       {testData?.status === 'testing' && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
                                       {testData?.status === 'success' && <span title="有效"><Check className="w-3.5 h-3.5 text-green-500" /></span>}
                                       {testData?.status === 'error' && <span title={testData.message}><X className="w-3.5 h-3.5 text-red-500" /></span>}
                                       
                                       <button 
                                         onClick={(e) => handleTestSingleModel(m, e)}
-                                        className="text-xs text-gray-500 hover:text-indigo-600 px-1 py-0.5 rounded hover:bg-gray-100 transition-colors"
+                                        className="text-xs text-gray-500 hover:text-indigo-600 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
                                         title="独立检测此模型"
                                       >
-                                        连通检测
+                                        检测
                                       </button>
                                     </div>
                                   )}
@@ -1919,7 +1919,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                 disabled={testModelStatus === 'testing' || !newModelEndpoint.trim() || !newModelName.trim()}
                 className="px-5 py-2.5 text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                {testModelStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin" /> : '检测模型'}
+                {testModelStatus === 'testing' ? <Loader2 className="w-4 h-4 animate-spin" /> : '检测'}
               </button>
               <button
                 type="button"
@@ -1928,7 +1928,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                 className="px-6 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                确认添加
+                添加
               </button>
             </div>
           </div>
