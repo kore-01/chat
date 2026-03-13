@@ -1693,10 +1693,13 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">添加模型</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  选择端点并选择模型 ID。
-                  <span className="text-red-500">注意：自动拉取模型不一定完全准确，可以参考平台官方文档，手动添加模型。</span>
-                </p>
+                <div className="text-xs text-gray-500 mt-1">
+                  选择端点并选择模型 ID，注意：
+                  <div className="text-red-500 font-bold mt-1 space-y-0.5 leading-relaxed">
+                    <p>1）自动拉取模型不一定准确，可参考平台官方文档，手动输入模型ID添加。</p>
+                    <p>2）自动获取模型，也会消耗 Token！</p>
+                  </div>
+                </div>
               </div>
               <button 
                 onClick={() => setIsAddModelModalOpen(false)}
