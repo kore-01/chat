@@ -398,6 +398,12 @@ app.post('/api/config/max-permissions', (req, res) => {
 
     if (enabled) {
       config.tools = MAX_PERMISSIONS_TOOLS;
+      // Ensure commands are fully enabled
+      if (!config.commands) config.commands = {};
+      config.commands.bash = true;
+      config.commands.restart = true;
+      config.commands.native = 'auto';
+      config.commands.nativeSkills = 'auto';
     } else {
       config.tools = { profile: 'coding' };
     }

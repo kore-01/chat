@@ -31,6 +31,16 @@ try {
     changed = true;
   }
 
+  // Ensure commands.bash is enabled (required by OpenClaw 2026.3.12+)
+  if (!config.commands) config.commands = {};
+  if (!config.commands.bash) {
+    config.commands.bash = true;
+    config.commands.restart = true;
+    config.commands.native = 'auto';
+    config.commands.nativeSkills = 'auto';
+    changed = true;
+  }
+
   if (changed) {
     fs.writeFileSync(openclawConfigPath, JSON.stringify(config, null, 2));
     console.log('Successfully patched openclaw.json to allow local loopback backend connections.');
