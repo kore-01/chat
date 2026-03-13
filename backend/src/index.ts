@@ -366,7 +366,8 @@ const MAX_PERMISSIONS_TOOLS = {
     ask: 'off'
   },
   elevated: {
-    enabled: true
+    enabled: true,
+    allowFrom: { webchat: ['*'], '*': ['*'] }
   }
 };
 
