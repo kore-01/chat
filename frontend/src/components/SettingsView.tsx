@@ -1648,10 +1648,17 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsEndpointModalOpen(false)}></div>
           <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-200 shadow-xl">
-            <div className="px-6 py-5 border-b border-gray-100">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingEndpoint ? '编辑端点设置' : '新增端点'}
               </h3>
+              <button 
+                onClick={() => setIsEndpointModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="关闭"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               {modelError && (
@@ -1755,9 +1762,9 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsAddModelModalOpen(false)}></div>
           <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-2xl min-h-[400px] overflow-visible relative z-10 animate-in fade-in zoom-in-95 duration-200 shadow-xl flex flex-col">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 rounded-t-2xl">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">添加模型</h3>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">添加模型</h3>
                 <div className="text-xs text-gray-500 mt-1">
                   选择端点并选择模型 ID，注意：
                   <div className="text-red-500 font-bold mt-1 space-y-0.5 leading-relaxed">
