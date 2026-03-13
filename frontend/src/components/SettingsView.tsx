@@ -1915,6 +1915,8 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                     onClick={() => {
                       if (isDiscovering) {
                         cancelDiscovery();
+                      } else if (hasFetched && discoveredModels.length > 0) {
+                        setHasFetched(false);
                       } else {
                         handleDiscoverModels(newModelEndpoint.trim());
                       }
@@ -1930,7 +1932,12 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                     }`}
                   >
                     {isDiscovering && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    {isDiscovering ? '自动拉取中...' : '自动拉取'}
+                    {isDiscovering 
+                      ? '自动拉取中...' 
+                      : (hasFetched && discoveredModels.length > 0) 
+                        ? '手动输入' 
+                        : '自动拉取'
+                    }
                   </button>
                 </div>
                 <div 
