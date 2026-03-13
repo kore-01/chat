@@ -32,7 +32,11 @@ export class OpenClawClient extends EventEmitter {
 
     this.connectPromise = new Promise((resolve, reject) => {
       const wsUrl = this.config.gatewayUrl.replace(/^http/, 'ws');
-      this.ws = new WebSocket(wsUrl);
+      const wsOptions: any = {};
+      if (this.config.gatewayUrl.includes('localhost') || this.config.gatewayUrl.includes('127.0.0.1')) {
+        wsOptions.headers = { Origin: this.config.gatewayUrl };
+      }
+      this.ws = new WebSocket(wsUrl, wsOptions);
 
       const fail = (err: Error) => {
         this.connected = false;
@@ -55,9 +59,9 @@ export class OpenClawClient extends EventEmitter {
                 minProtocol: 3,
                 maxProtocol: 3,
                 client: {
-                  id: 'gateway-client',
+                  id: 'openclaw-control-ui',
                   version: 'clawui-backend',
-                  mode: 'backend',
+                  mode: 'webchat',
                   platform: process.platform,
                 },
                 caps: [],

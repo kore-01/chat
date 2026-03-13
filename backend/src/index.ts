@@ -297,16 +297,20 @@ app.post('/api/config/test', async (req, res) => {
   }
 
   try {
+    console.log('[API] /api/config/test - Creating client');
     const client = new OpenClawClient({ gatewayUrl, token, password });
-    client.on('error', () => { /* Prevent unhandled event crash */ });
+    client.on('error', (err) => { console.error('[API] Client error:', err); });
     
     // Attempt to connect and authenticate
+    console.log('[API] /api/config/test - Connecting client');
     await client.connect();
     
     // If we reach here, connection and authentication succeeded
+    console.log('[API] /api/config/test - Connection successful, disconnecting');
     client.disconnect();
     res.json({ success: true, message: 'Connection successful' });
   } catch (error: any) {
+    console.error('[API] /api/config/test - Connection failed:', error);
     res.json({ success: false, message: error?.message || 'Connection failed' });
   }
 });
