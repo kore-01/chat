@@ -85,6 +85,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const discoverAbortControllerRef = useRef<AbortController | null>(null);
+  const testAllAbortControllerRef = useRef<AbortController | null>(null);
   const [addModelError, setAddModelError] = useState('');
   const [existingModelTestStatus, setExistingModelTestStatus] = useState<Record<string, { status: 'testing'|'success'|'error', message?: string }>>({}); 
   const [isTestingExisting, setIsTestingExisting] = useState(false);
@@ -222,14 +223,15 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
     }
   };
 
-  const handleTestSingleModel = async (modelId: string, e?: React.MouseEvent) => {
+  const handleTestSingleModel = async (modelId: string, e?: React.MouseEvent, signal?: AbortSignal) => {
     if (e) e.stopPropagation();
     setIndividualTestStatus(prev => ({...prev, [modelId]: { status: 'testing', message: '' }}));
     try {
       const res = await fetch('/api/models/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: newModelEndpoint.trim(), modelName: modelId })
+        body: JSON.stringify({ endpoint: newModelEndpoint.trim(), modelName: modelId }),
+        signal
       });
       const data = await res.json().catch(() => ({}));
       if (data.success) {
@@ -238,7 +240,16 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
         setIndividualTestStatus(prev => ({...prev, [modelId]: { status: 'error', message: data.error || '失败' }}));
       }
     } catch (err: any) {
-      setIndividualTestStatus(prev => ({...prev, [modelId]: { status: 'error', message: '网络错误' }}));
+      if (err.name === 'AbortError') {
+        // Just clear the testing state if aborted, don't show an error
+        setIndividualTestStatus(prev => {
+          const next = { ...prev };
+          delete next[modelId];
+          return next;
+        });
+      } else {
+        setIndividualTestStatus(prev => ({...prev, [modelId]: { status: 'error', message: '网络错误' }}));
+      }
     }
   };
 
@@ -266,16 +277,36 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
 
   const handleTestAllFiltered = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    
+    if (testAllAbortControllerRef.current) {
+      testAllAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    testAllAbortControllerRef.current = controller;
+
     const filtered = discoveredModels.filter(m => m.toLowerCase().includes(modelSearchQuery.toLowerCase()));
     const testPromises = filtered.map(async (m) => {
       if (existingModelIds.has(`${newModelEndpoint.trim()}/${m}`)) return;
-      await handleTestSingleModel(m);
+      await handleTestSingleModel(m, undefined, controller.signal);
     });
 
     try {
       await Promise.all(testPromises);
     } catch (error: any) {
-      setAddModelError(error.message || '批量测试部分失败');
+      if (error.name !== 'AbortError') {
+        setAddModelError(error.message || '批量测试部分失败');
+      }
+    } finally {
+      if (testAllAbortControllerRef.current === controller) {
+        testAllAbortControllerRef.current = null;
+      }
+    }
+  };
+
+  const cancelTestAll = () => {
+    if (testAllAbortControllerRef.current) {
+      testAllAbortControllerRef.current.abort();
+      testAllAbortControllerRef.current = null;
     }
   };
 
@@ -1984,11 +2015,21 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                                 </button>
                               </div>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleTestAllFiltered(); }}
-                                disabled={isAnyTesting || visibleDiscoveredModels.length === 0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isAnyTesting) {
+                                    cancelTestAll();
+                                  } else {
+                                    handleTestAllFiltered();
+                                  }
+                                }}
+                                disabled={!isAnyTesting && visibleDiscoveredModels.length === 0}
+                                title={isAnyTesting ? "模型检测中，点击可取消检测" : ""}
                                 className={`text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all border ${
-                                  isAnyTesting || visibleDiscoveredModels.length === 0
+                                  !isAnyTesting && visibleDiscoveredModels.length === 0
                                     ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                    : isAnyTesting
+                                    ? 'text-red-600 bg-red-50 hover:bg-red-100 border-red-200'
                                     : 'text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
                                 }`}
                               >
