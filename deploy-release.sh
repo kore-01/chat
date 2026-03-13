@@ -23,6 +23,9 @@ cd frontend && npm install && cd ..
 echo "Building projects..."
 npm run build
 
+echo "Patching OpenClaw device scopes (OpenClaw >= 2026.3.12)..."
+npm run patch-scopes || echo "Warning: Failed to patch OpenClaw scopes. Manually run: npm run patch-scopes"
+
 echo "Setting up systemd service..."
 mkdir -p "$SERVICE_DIR"
 
