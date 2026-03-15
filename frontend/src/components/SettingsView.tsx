@@ -1662,6 +1662,30 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       <Github className="w-5 h-5 text-gray-900 group-hover:-translate-y-0.5 transition-transform" />
                       <span>Github</span>
                     </a>
+                    <a
+                      href="https://copy.10086hy.com/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#3b82f6] hover:text-blue-700 transition-colors text-[13px] sm:text-[14px]"
+                    >
+                      查秘钥
+                    </a>
+                    <a
+                      href="https://2fa.fun/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#3b82f6] hover:text-blue-700 transition-colors text-[13px] sm:text-[14px]"
+                    >
+                      Google 2FA码获取
+                    </a>
+                    <a
+                      href="https://08.ink/3"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#3b82f6] hover:text-blue-700 transition-colors text-[13px] sm:text-[14px]"
+                    >
+                      娱乐一下
+                    </a>
                   </div>
 
               </div>
