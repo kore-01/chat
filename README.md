@@ -2,9 +2,11 @@
 <img width="1014" height="620" alt="PixPin_2026-03-10_18-49-55" src="https://github.com/user-attachments/assets/efdb14cb-c2cf-4e2d-9df7-5b5e30db9161" />
 </p>
 
-# OpenClaw Chat Gateway
+# 智核助手 (OpenClaw Chat Gateway)
 
 **现代化、生产级的 OpenClaw 全功能 Web 客户端**
+
+> 版本: 2.01
 
 [简体中文](#简体中文) | [English](#english)
 
@@ -24,6 +26,7 @@
 - **🗝️ 智能体完全隔离 (Sandboxing)**：独立工作区、独立记忆。每个角色拥有专属的 `SOUL.md` 和 `USER.md`，彻底告别对话污染。
 - **🖼️ 工业级预览体验**：集成 LibreOffice 渲染能力，完美支持 Word, PPT, Excel, PDF 等复杂文档在线预览，还原真实排版。
 - **🚀 深度原生集成**：在对话窗口直接运行 `/status`、`/help` 等底层指令，实时反馈系统状态。
+- **📋 快捷命令系统**：支持 `/` 快捷命令，聚合内置命令、Skills 和 MCP 服务器，一键调用各种功能。
 
 <p align="center">
   <img src="docs/screenshots/agent_config.png" width="45%" />
@@ -78,7 +81,9 @@ sudo apt update && sudo apt install libreoffice -y
 
 ## English
 
-**OpenClaw Chat Gateway** is a production-grade Web client designed specifically for the OpenClaw ecosystem. It provides a complete "Agent Sandboxing" management solution for advanced users, combined with a cutting-edge responsive interface to take your OpenClaw experience to a new dimension.
+**智核助手 (OpenClaw Chat Gateway)** is a production-grade Web client designed specifically for the OpenClaw ecosystem. It provides a complete "Agent Sandboxing" management solution for advanced users, combined with a cutting-edge responsive interface to take your OpenClaw experience to a new dimension.
+
+> Version: 2.01
 
 ### 🌟 Core Highlights
 
@@ -90,6 +95,7 @@ sudo apt update && sudo apt install libreoffice -y
 - **🗝️ Complete Agent Isolation (Sandboxing)**: Independent workspaces and memory. Each character has its own `SOUL.md` and `USER.md`, completely eliminating conversation pollution.
 - **🖼️ Industrial-Grade Preview Experience**: Integrated with LibreOffice rendering capabilities, it perfectly supports online previews of complex documents such as Word, PPT, Excel, and PDF, preserving the original layout.
 - **🚀 Deep Native Integration**: Run low-level commands like `/status` and `/help` directly in the chat window for real-time system status feedback.
+- **📋 Quick Command System**: Supports `/` shortcut commands, aggregating built-in commands, Skills, and MCP servers for one-click access to various features.
 
 <p align="center">
   <img src="docs/screenshots/agent_config.png" width="45%" />
