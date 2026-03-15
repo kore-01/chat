@@ -74,11 +74,6 @@ curl -fsSL https://raw.githubusercontent.com/kore-01/chat/main/uninstall.sh | ba
 sudo apt update && sudo apt install libreoffice -y
 ```
 
-### 💬 社群与支持
-- **Telegram 群**: [安格视界 (AngeWorld)](https://t.me/angeworld2024)
-- **资源站**: [安格超市 (Ange Market)](https://blog.angeworld.cc/market/)
-- **AI 接口**: [芝麻开门 AI 接口](https://ai.opendoor.cn)
-
 ---
 
 ## English
@@ -144,7 +139,3 @@ If you need to preview documents like Word, PPT, or Excel, please run the follow
 sudo apt update && sudo apt install libreoffice -y
 ```
 
-### 💬 Community & Support
-- **Telegram Group**: [安格视界 (AngeWorld)](https://t.me/angeworld2024)
-- **Resource Site**: [安格超市 (Ange Market)](https://blog.angeworld.cc/market/)
-- **AI Interface**: [芝麻开门 AI 接口](https://ai.opendoor.cn)
