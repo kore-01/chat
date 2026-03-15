@@ -1177,11 +1177,6 @@ app.get('/api/files', (_req, res) => {
   res.json({ success: true, files: db.getFiles(300) });
 });
 
-app.get('/api/commands', (_req, res) => {
-  const commands = db.getQuickCommands();
-  res.json({ success: true, commands });
-});
-
 app.post('/api/commands', (req, res) => {
   const { command, description } = req.body;
   if (!command || !description) return res.status(400).json({ success: false, error: 'Missing command or description' });
@@ -1213,6 +1208,174 @@ app.delete('/api/commands/:id', (req, res) => {
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// GET /api/commands/skills - Read skills from server filesystem (独立端点)
+app.get('/api/commands/skills', (_req, res) => {
+  const homeDir = os.homedir();
+  const skillsDirs = [
+    path.join(homeDir, '.openclaw', 'skills'),
+    path.join(homeDir, '.openclaw', 'workspace', 'skills'),
+  ];
+
+  const skills: { command: string; description: string; source: string; path: string }[] = [];
+
+  for (const dir of skillsDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+
+        const skillName = entry.name;
+        const skillPath = path.join(dir, skillName);
+        const skillMdPath = path.join(skillPath, 'SKILL.md');
+
+        let description = `${skillName} skill`;
+        if (fs.existsSync(skillMdPath)) {
+          try {
+            const content = fs.readFileSync(skillMdPath, 'utf-8');
+            const firstLine = content.split('\n').find(line => line.trim() !== '');
+            if (firstLine) {
+              description = firstLine.trim().substring(0, 200);
+            }
+          } catch (e) {
+            console.error(`[Skills] Failed to read SKILL.md for ${skillName}:`, e);
+          }
+        }
+
+        skills.push({
+          command: `/skill:${skillName}`,
+          description,
+          source: 'skill',
+          path: skillPath,
+        });
+      }
+    } catch (e) {
+      console.error(`[Skills] Failed to read directory ${dir}:`, e);
+    }
+  }
+
+  res.json({ success: true, skills });
+});
+
+// GET /api/commands/mcp - Read MCP servers from mcporter.json
+app.get('/api/commands/mcp', (_req, res) => {
+  const homeDir = os.homedir();
+  const mcporterPath = path.join(homeDir, '.openclaw', 'workspace', 'config', 'mcporter.json');
+
+  if (!fs.existsSync(mcporterPath)) {
+    return res.json({ success: true, mcpServers: [] });
+  }
+
+  try {
+    const content = fs.readFileSync(mcporterPath, 'utf-8');
+    const config = JSON.parse(content);
+    const servers = config.mcpServers || config.servers || {};
+
+    const mcpServers = Object.entries(servers).map(([name, info]: [string, any]) => ({
+      command: `/mcp:${name}`,
+      description: info.description || `${name} MCP server`,
+      source: 'mcp',
+      name,
+      url: info.url || info.command || '',
+    }));
+
+    res.json({ success: true, mcpServers });
+  } catch (error: any) {
+    console.error(`[MCP] Failed to read mcporter.json:`, error.message);
+    res.json({ success: true, mcpServers: [] });
+  }
+});
+
+// Modified GET /api/commands - Aggregate all sources
+app.get('/api/commands', (_req, res) => {
+  const homeDir = os.homedir();
+
+  // 1. Get built-in commands from database
+  const dbCommands = db.getQuickCommands() as { id: number; command: string; description: string; source?: string }[];
+  const builtinCommands = dbCommands.map(cmd => ({
+    ...cmd,
+    source: cmd.source || 'builtin',
+  }));
+
+  // 2. Get skills from filesystem
+  const skillsDirs = [
+    path.join(homeDir, '.openclaw', 'skills'),
+    path.join(homeDir, '.openclaw', 'workspace', 'skills'),
+  ];
+  const skillCommands: { id: number; command: string; description: string; source: string }[] = [];
+
+  for (const dir of skillsDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+
+        const skillName = entry.name;
+        const skillPath = path.join(dir, skillName);
+        const skillMdPath = path.join(skillPath, 'SKILL.md');
+
+        let description = `${skillName} skill`;
+        if (fs.existsSync(skillMdPath)) {
+          try {
+            const content = fs.readFileSync(skillMdPath, 'utf-8');
+            const firstLine = content.split('\n').find(line => line.trim() !== '');
+            if (firstLine) {
+              description = firstLine.trim().substring(0, 200);
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        // Use negative ID to avoid conflict with database commands
+        skillCommands.push({
+          id: -skillCommands.length - 1,
+          command: `/skill:${skillName}`,
+          description,
+          source: 'skill',
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // 3. Get MCP servers from mcporter.json
+  const mcporterPath = path.join(homeDir, '.openclaw', 'workspace', 'config', 'mcporter.json');
+  const mcpCommands: { id: number; command: string; description: string; source: string }[] = [];
+
+  if (fs.existsSync(mcporterPath)) {
+    try {
+      const content = fs.readFileSync(mcporterPath, 'utf-8');
+      const config = JSON.parse(content);
+      const servers = config.mcpServers || config.servers || {};
+
+      Object.entries(servers).forEach(([name, info]: [string, any], idx) => {
+        mcpCommands.push({
+          id: -1000 - idx,
+          command: `/mcp:${name}`,
+          description: info.description || `${name} MCP server`,
+          source: 'mcp',
+        });
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Aggregate all commands
+  const allCommands = [
+    ...builtinCommands,
+    ...skillCommands,
+    ...mcpCommands,
+  ];
+
+  res.json({ success: true, commands: allCommands });
 });
 
 app.get('/uploads/:filename', (req, res) => {

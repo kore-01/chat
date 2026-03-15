@@ -48,7 +48,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
   };
 
   // --- Quick Commands state ---
-  const [commands, setCommands] = useState<{ id: number; command: string; description: string }[]>([]);
+  const [commands, setCommands] = useState<{ id: number; command: string; description: string; source: string }[]>([]);
   const [newCommand, setNewCommand] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1227,30 +1227,52 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {commands.map((cmd) => (
-                        <tr key={cmd.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-mono font-bold text-blue-600">{cmd.command}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{cmd.description}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button 
-                                onClick={() => startEdit(cmd)}
-                                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                                title="编辑"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteCommand(cmd.id)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                title="删除"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {commands.map((cmd) => {
+                        // Source badge configuration
+                        const sourceConfig: Record<string, { label: string; bg: string; text: string }> = {
+                          builtin: { label: '内置', bg: 'bg-gray-100', text: 'text-gray-600' },
+                          skill: { label: 'Skill', bg: 'bg-green-100', text: 'text-green-700' },
+                          mcp: { label: 'MCP', bg: 'bg-purple-100', text: 'text-purple-700' },
+                        };
+                        const sourceStyle = sourceConfig[cmd.source] || sourceConfig.builtin;
+                        const isEditable = cmd.source === 'builtin' || cmd.source === undefined;
+
+                        return (
+                          <tr key={cmd.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-mono font-bold text-blue-600">
+                              <div className="flex items-center gap-2">
+                                {cmd.command}
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${sourceStyle.bg} ${sourceStyle.text}`}>
+                                  {sourceStyle.label}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{cmd.description}</td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {isEditable && (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(cmd)}
+                                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                                      title="编辑"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCommand(cmd.id)}
+                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                      title="删除"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                       {commands.length === 0 && (
                         <tr>
                           <td colSpan={3} className="px-6 py-12 text-center text-gray-400 text-sm italic">

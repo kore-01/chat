@@ -33,8 +33,8 @@ export default function ChatView({ isConnected, activeSessionId, onMenuClick, se
   const [dynamicContents, setDynamicContents] = useState<Record<string, string>>({});
   const [currentModel, setCurrentModel] = useState<string | null>(null);
   const [showCommands, setShowCommands] = useState(false);
-  const [allCommands, setAllCommands] = useState<{ id: number; command: string; description: string }[]>([]);
-  const [filteredCommands, setFilteredCommands] = useState<{ id: number; command: string; description: string }[]>([]);
+  const [allCommands, setAllCommands] = useState<{ id: number; command: string; description: string; source: string }[]>([]);
+  const [filteredCommands, setFilteredCommands] = useState<{ id: number; command: string; description: string; source: string }[]>([]);
   const [commandIndex, setCommandIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<{file: File, preview: string}[]>([]);
@@ -1328,24 +1328,37 @@ export default function ChatView({ isConnected, activeSessionId, onMenuClick, se
                   <span>{filteredCommands.length} 个结果</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto">
-                  {filteredCommands.map((cmd, idx) => (
-                    <button 
-                      key={cmd.id}
-                      type="button"
-                      onClick={() => { 
-                          setInput(cmd.command + ' '); 
-                          setShowCommands(false); 
-                          textareaRef.current?.focus();
-                      }} 
-                      onMouseEnter={() => setCommandIndex(idx)}
-                      className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 transition-colors ${idx === commandIndex ? 'bg-blue-100' : 'hover:bg-gray-50'}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-extrabold ${idx === commandIndex ? 'text-blue-600' : 'text-gray-900'}`}>{cmd.command}</span>
-                      </div>
-                      <div className="text-[13px] text-gray-500 truncate">{cmd.description}</div>
-                    </button>
-                  ))}
+                  {filteredCommands.map((cmd, idx) => {
+                    // Source badge configuration
+                    const sourceConfig: Record<string, { label: string; bg: string; text: string }> = {
+                      builtin: { label: '内置', bg: 'bg-gray-100', text: 'text-gray-600' },
+                      skill: { label: 'Skill', bg: 'bg-green-100', text: 'text-green-700' },
+                      mcp: { label: 'MCP', bg: 'bg-purple-100', text: 'text-purple-700' },
+                    };
+                    const sourceStyle = sourceConfig[cmd.source] || sourceConfig.builtin;
+
+                    return (
+                      <button
+                        key={cmd.id}
+                        type="button"
+                        onClick={() => {
+                            setInput(cmd.command + ' ');
+                            setShowCommands(false);
+                            textareaRef.current?.focus();
+                        }}
+                        onMouseEnter={() => setCommandIndex(idx)}
+                        className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 transition-colors ${idx === commandIndex ? 'bg-blue-100' : 'hover:bg-gray-50'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-extrabold ${idx === commandIndex ? 'text-blue-600' : 'text-gray-900'}`}>{cmd.command}</span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${sourceStyle.bg} ${sourceStyle.text}`}>
+                            {sourceStyle.label}
+                          </span>
+                        </div>
+                        <div className="text-[13px] text-gray-500 truncate">{cmd.description}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

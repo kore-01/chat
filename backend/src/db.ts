@@ -75,6 +75,7 @@ export class DB {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         command TEXT NOT NULL UNIQUE,
         description TEXT NOT NULL,
+        source TEXT DEFAULT 'builtin',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -108,9 +109,9 @@ export class DB {
       VALUES ('char_coder', '代码专家', 'coder', 'You are an expert software engineer and architect.');
 
       -- Insert default commands if they don't exist
-      INSERT OR IGNORE INTO quick_commands (command, description) VALUES ('/models', '列出模型供应商可进一步变更模型');
-      INSERT OR IGNORE INTO quick_commands (command, description) VALUES ('/help', '帮助信息');
-      INSERT OR IGNORE INTO quick_commands (command, description) VALUES ('/clear', '清空当前会话');
+      INSERT OR IGNORE INTO quick_commands (command, description, source) VALUES ('/models', '列出模型供应商可进一步变更模型', 'builtin');
+      INSERT OR IGNORE INTO quick_commands (command, description, source) VALUES ('/help', '帮助信息', 'builtin');
+      INSERT OR IGNORE INTO quick_commands (command, description, source) VALUES ('/clear', '清空当前会话', 'builtin');
     `);
 
     try {
@@ -139,6 +140,9 @@ export class DB {
     try { this.db.exec("ALTER TABLE chat_messages ADD COLUMN model_used TEXT"); } catch (e: any) {}
     try { this.db.exec("ALTER TABLE chat_messages ADD COLUMN agent_id TEXT"); } catch (e: any) {}
     try { this.db.exec("ALTER TABLE chat_messages ADD COLUMN agent_name TEXT"); } catch (e: any) {}
+
+    // Quick commands source field migration
+    try { this.db.exec("ALTER TABLE quick_commands ADD COLUMN source TEXT DEFAULT 'builtin'"); } catch (e: any) {}
   }
 
   // --- Quick Commands ---
@@ -146,16 +150,22 @@ export class DB {
     return this.db.prepare('SELECT * FROM quick_commands ORDER BY id ASC').all();
   }
 
-  saveQuickCommand(command: string, description: string) {
+  saveQuickCommand(command: string, description: string, source: string = 'builtin') {
     return this.db
-      .prepare('INSERT INTO quick_commands (command, description) VALUES (?, ?)')
-      .run(command, description);
+      .prepare('INSERT INTO quick_commands (command, description, source) VALUES (?, ?, ?)')
+      .run(command, description, source);
   }
 
   updateQuickCommand(id: number, command: string, description: string) {
     return this.db
       .prepare('UPDATE quick_commands SET command = ?, description = ? WHERE id = ?')
       .run(command, description, id);
+  }
+
+  upsertQuickCommand(command: string, description: string, source: string) {
+    return this.db
+      .prepare('INSERT INTO quick_commands (command, description, source) VALUES (?, ?, ?) ON CONFLICT(command) DO UPDATE SET description = excluded.description, source = excluded.source')
+      .run(command, description, source);
   }
 
   deleteQuickCommand(id: number) {
