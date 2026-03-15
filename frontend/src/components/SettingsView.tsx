@@ -1646,12 +1646,12 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                   {/* API Button Row */}
                   <div className="w-full flex justify-center mb-8 px-2">
                     <a
-                      href="https://ai.opendoor.cn"
+                      href="https://news.139.ink"
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center justify-center px-6 py-2.5 rounded-xl sm:rounded-full bg-[#fefce8] border border-blue-300 text-[#3b82f6] hover:bg-yellow-100 hover:border-blue-400 transition-all font-bold text-[11px] min-[380px]:text-[12px] sm:text-[14px] max-w-full text-center"
                     >
-                      芝麻开门 AI 接口 : https://ai.opendoor.cn
+                      新闻中心 : https://news.139.ink
                     </a>
                   </div>
 
