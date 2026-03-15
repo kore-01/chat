@@ -1,4 +1,4 @@
-// OpenClaw Chat Gateway - Service Worker
+// 智核助手 - Service Worker
 // Strategy:
 //   - HTML (navigation): always network-first, never cache → prevents stale index.html white screen
 //   - /assets/* (hashed JS/CSS): cache-first → fast load after first visit

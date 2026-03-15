@@ -37,8 +37,7 @@ function SessionSkeleton() {
 function SidebarHeader() {
   return (
     <div className="pt-4 pb-6 px-6">
-      <div className="text-2xl font-black text-gray-900 tracking-tighter leading-tight mb-1">OpenClaw</div>
-      <div className="text-[1.15rem] font-bold text-gray-400 tracking-widest uppercase leading-tight">CHAT GATEWAY</div>
+      <div className="text-2xl font-black text-gray-900 tracking-tighter leading-tight">智核助手</div>
     </div>
   );
 }
