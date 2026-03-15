@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Check, X, Loader2, Edit2, Trash2, Plus, Menu, Activity } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Loader2, Edit2, Trash2, Plus, Menu, Activity, Github } from 'lucide-react';
 import { SettingsTab } from '../App';
 
 interface SettingsViewProps {
@@ -1644,7 +1644,7 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                   </div>
 
                   {/* API Button Row */}
-                  <div className="w-full flex justify-center mb-8 px-2">
+                  <div className="w-full flex flex-col items-center gap-3 mb-8 px-2">
                     <a
                       href="https://news.139.ink"
                       target="_blank"
@@ -1652,6 +1652,15 @@ export default function SettingsView({ settingsTab, onMenuClick }: SettingsViewP
                       className="flex items-center justify-center px-6 py-2.5 rounded-xl sm:rounded-full bg-[#fefce8] border border-blue-300 text-[#3b82f6] hover:bg-yellow-100 hover:border-blue-400 transition-all font-bold text-[11px] min-[380px]:text-[12px] sm:text-[14px] max-w-full text-center"
                     >
                       新闻中心 : https://news.139.ink
+                    </a>
+                    <a
+                      href="https://github.com/kore-01/chat"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 text-[#3b82f6] hover:text-blue-700 transition-colors group text-[13px] sm:text-[15px] font-medium"
+                    >
+                      <Github className="w-5 h-5 text-gray-900 group-hover:-translate-y-0.5 transition-transform" />
+                      <span>Github</span>
                     </a>
                   </div>
 
